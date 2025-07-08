@@ -4,32 +4,33 @@ import com.yourname.simpleclicker.SimpleClickerMod;
 import com.yourname.simpleclicker.config.ModConfig;
 import com.yourname.simpleclicker.gui.SettingsGui;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.awt.AWTException;
-import java.awt.Robot;
-import java.awt.event.InputEvent;
+import java.lang.reflect.Method;
 import java.util.Random;
 
 public class ClientEventHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Random random = new Random();
-    private Robot robot;
 
-    // Возвращаемся к таймингу на основе миллисекунд
     private long nextLeftClickTime = 0;
     private long nextRightClickTime = 0;
 
-    public ClientEventHandler() {
-        // Инициализируем Robot. Оборачиваем в try-catch на случай,
-        // если система не поддерживает симуляцию ввода.
+    // Снова используем рефлексию для прямого вызова клика
+    private static Method clickMouseMethod;
+    private static Method rightClickMouseMethod;
+
+    static {
         try {
-            this.robot = new Robot();
-        } catch (AWTException e) {
-            System.err.println("Failed to create Robot for autoclicker!");
+            clickMouseMethod = Minecraft.class.getDeclaredMethod("func_147116_af");
+            rightClickMouseMethod = Minecraft.class.getDeclaredMethod("func_147121_ag");
+            clickMouseMethod.setAccessible(true);
+            rightClickMouseMethod.setAccessible(true);
+        } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
     }
@@ -43,40 +44,53 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-        // Проверяем только в конце тика
         if (event.phase == TickEvent.Phase.END) {
-            // Если робот не создался, или мы не в игре - ничего не делаем
-            if (robot == null || !ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
+            if (!ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
                 return;
             }
-
-            // Используем новую логику
             handleLeftClicker();
             handleRightClicker();
         }
     }
 
     private void handleLeftClicker() {
-        if (ModConfig.leftClickerEnabled && mc.gameSettings.keyBindAttack.isKeyDown()) {
+        KeyBinding key = mc.gameSettings.keyBindAttack;
+        if (ModConfig.leftClickerEnabled && key.isKeyDown()) {
+            // ШАГ 1: ПОДАВЛЕНИЕ. Говорим игре, что кнопка не зажата, чтобы она не делала стандартное действие.
+            KeyBinding.setKeyBindState(key.getKeyCode(), false);
+
+            // ШАГ 2: ПРОВЕРКА ТАЙМЕРА.
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextLeftClickTime) {
-                // Выполняем системный клик
-                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-                // Рассчитываем задержку до следующего клика
+                // ШАГ 3: ЗАМЕЩЕНИЕ. Выполняем наш собственный клик напрямую.
+                try {
+                    if (clickMouseMethod != null) {
+                        clickMouseMethod.invoke(mc);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                // Рассчитываем время следующего клика
                 nextLeftClickTime = currentTime + calculateDelayInMillis(ModConfig.leftCps, ModConfig.leftRandomization);
             }
         }
     }
 
     private void handleRightClicker() {
-        if (ModConfig.rightClickerEnabled && mc.gameSettings.keyBindUseItem.isKeyDown()) {
+        KeyBinding key = mc.gameSettings.keyBindUseItem;
+        if (ModConfig.rightClickerEnabled && key.isKeyDown()) {
+            // Аналогичная логика подавления и замещения для ПКМ
+            KeyBinding.setKeyBindState(key.getKeyCode(), false);
+
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextRightClickTime) {
-                // Выполняем системный клик
-                robot.mousePress(InputEvent.BUTTON3_DOWN_MASK); // BUTTON3 для ПКМ
-                robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-                // Рассчитываем задержку до следующего клика
+                try {
+                    if (rightClickMouseMethod != null) {
+                        rightClickMouseMethod.invoke(mc);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 nextRightClickTime = currentTime + calculateDelayInMillis(ModConfig.rightCps, ModConfig.rightRandomization);
             }
         }
@@ -88,8 +102,8 @@ public class ClientEventHandler {
         double baseDelay = 1000.0 / cps;
         if (randomization > 0) {
             double randomOffset = (random.nextDouble() - 0.5) * baseDelay * randomization;
-            return (long) (baseDelay + randomOffset);
+            return Math.max(1, (long) (baseDelay + randomOffset)); // Убеждаемся, что задержка не 0
         }
-        return (long) baseDelay;
+        return Math.max(1, (long) baseDelay);
     }
 }
