@@ -1,0 +1,16 @@
+[
+{
+  "modid": "simpleclicker",
+  "name": "Simple Clicker Mod",
+  "description": "A simple, customizable autoclicker mod.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["YourName"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
