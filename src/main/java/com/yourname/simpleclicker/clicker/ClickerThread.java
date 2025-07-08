@@ -1,48 +1,52 @@
 package com.yourname.simpleclicker.clicker;
 
 import com.yourname.simpleclicker.config.ModConfig;
-import org.lwjgl.input.Mouse;
-import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
+import java.awt.AWTException;
+import java.awt.Robot;
+import java.awt.event.InputEvent;
 import java.util.Random;
 
 public class ClickerThread extends Thread {
 
     private final int button;
     private final Random random = new Random();
+    private Robot robot;
 
-    // --- НОВЫЙ БЛОК С РЕФЛЕКСИЕЙ ---
-    // Здесь мы будем хранить "отмычки" к спрятанным методам
-    private static Method methodGetEventSize;
-    private static Method methodPutEvent;
-
-    // Этот статический блок выполнится один раз при загрузке класса.
-    // Он найдет спрятанные методы и сделает их доступными для нас.
-    static {
-        try {
-            methodGetEventSize = Mouse.class.getDeclaredMethod("getEventSize");
-            methodPutEvent = Mouse.class.getDeclaredMethod("putEvent", ByteBuffer.class);
-            // Делаем методы доступными, даже если они приватные
-            methodGetEventSize.setAccessible(true);
-            methodPutEvent.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-            // Если методы не найдены (например, другая версия LWJGL), выводим ошибку.
-            throw new RuntimeException("Failed to access LWJGL methods via reflection", e);
-        }
-    }
-    // --- КОНЕЦ НОВОГО БЛОКА ---
-
+    // Определяем маски кнопок для Robot
+    private final int mouseButtonMask;
 
     public ClickerThread(int button) {
         super("ClickerThread-" + (button == 0 ? "Left" : "Right"));
         this.button = button;
+
+        // Присваиваем правильную маску в зависимости от кнопки
+        if (button == 0) {
+            this.mouseButtonMask = InputEvent.BUTTON1_DOWN_MASK; // Левая кнопка
+        } else {
+            this.mouseButtonMask = InputEvent.BUTTON3_DOWN_MASK; // Правая кнопка (BUTTON2 - средняя)
+        }
+
+        try {
+            // Инициализируем Robot один раз при создании потока
+            this.robot = new Robot();
+        } catch (AWTException e) {
+            System.err.println("Failed to initialize Robot for clicker thread. Clicker will not work.");
+            e.printStackTrace();
+            this.robot = null; // Если не удалось, отключаем кликер
+        }
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                Thread.sleep(50);
+                // Если Robot не инициализировался, поток просто спит
+                if (robot == null) {
+                    Thread.sleep(5000);
+                    continue;
+                }
+                
+                Thread.sleep(10); // Небольшая задержка для снижения нагрузки
 
                 boolean isActive = (button == 0) ? ModConfig.leftClickerActive : ModConfig.rightClickerActive;
                 boolean isEnabled = (button == 0) ? ModConfig.leftClickerEnabled : ModConfig.rightClickerEnabled;
@@ -60,39 +64,22 @@ public class ClickerThread extends Thread {
                 Thread.sleep(delay);
 
             } catch (Exception e) {
-                // Ловим общие исключения, так как рефлексия может их выбрасывать
                 e.printStackTrace();
             }
         }
     }
 
-    private void performClick() throws Exception { // Добавляем throws Exception
-        // --- ИСПРАВЛЕННЫЙ МЕТОД КЛИКА ---
-
-        // Вызываем getEventSize() с помощью рефлексии
-        int eventSize = (int) methodGetEventSize.invoke(null);
-        ByteBuffer buffer = ByteBuffer.allocate(eventSize);
-
-        // Событие "кнопка нажата"
-        buffer.put(0, (byte) this.button);
-        buffer.putInt(4, 1);
-        buffer.putLong(12, Mouse.getEventNanoseconds());
-        buffer.flip();
-        // Вызываем putEvent(buffer) с помощью рефлексии
-        methodPutEvent.invoke(null, buffer);
-        buffer.clear();
-
-        // Задержка между нажатием и отпусканием
-        Thread.sleep(15 + random.nextInt(10));
-
-        // Событие "кнопка отпущена"
-        buffer.put(0, (byte) this.button);
-        buffer.putInt(4, 0);
-        buffer.putLong(12, Mouse.getEventNanoseconds());
-        buffer.flip();
-        // Снова вызываем putEvent(buffer) с помощью рефлексии
-        methodPutEvent.invoke(null, buffer);
-        buffer.clear();
+    private void performClick() {
+        // Нажимаем кнопку
+        robot.mousePress(this.mouseButtonMask);
+        try {
+            // Спим очень короткое, случайное время, чтобы имитировать реальное нажатие
+            Thread.sleep(10 + random.nextInt(15));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // Отпускаем кнопку
+        robot.mouseRelease(this.mouseButtonMask);
     }
 
     private long calculateDelay(double cps, double randomization) {
@@ -100,8 +87,9 @@ public class ClickerThread extends Thread {
         long baseDelay = (long) (1000.0 / cps);
         if (randomization > 0) {
             long randomOffset = (long) ((random.nextDouble() - 0.5) * baseDelay * randomization);
-            return Math.max(10, baseDelay + randomOffset);
+            // Убеждаемся, что задержка не слишком маленькая
+            return Math.max(20, baseDelay + randomOffset);
         }
-        return Math.max(10, baseDelay);
+        return Math.max(20, baseDelay);
     }
 }
