@@ -12,8 +12,10 @@ public class GuiSlider extends GuiButton {
     private final String label;
     private boolean dragging;
 
-    private static final Color TRACK_COLOR = new Color(10, 10, 10, 150);
-    private static final Color FILLED_COLOR = new Color(70, 130, 255);
+    private static final Color TRACK_COLOR = new Color(10, 10, 10, 180);
+    private static final Color FILLED_COLOR = new Color(50, 100, 220); // Более насыщенный синий
+    private static final Color HANDLE_COLOR = new Color(255, 255, 255);
+    private static final Color HANDLE_HOVER_COLOR = new Color(120, 170, 255); // Цвет подсветки
 
     public GuiSlider(int id, int x, int y, int width, int height, String label, float min, float max, float current) {
         super(id, x, y, width, height, "");
@@ -35,7 +37,7 @@ public class GuiSlider extends GuiButton {
     @Override
     protected void mouseDragged(Minecraft mc, int mouseX, int mouseY) {
         if (this.visible && this.dragging) {
-            this.sliderValue = (float) (mouseX - this.xPosition) / (float) this.width;
+            this.sliderValue = (float) (mouseX - (this.xPosition + 2)) / (float) (this.width - 4);
             this.sliderValue = Math.max(0.0F, Math.min(1.0F, this.sliderValue));
             updateDisplayString();
         }
@@ -44,7 +46,7 @@ public class GuiSlider extends GuiButton {
     @Override
     public boolean mousePressed(Minecraft mc, int mouseX, int mouseY) {
         if (super.mousePressed(mc, mouseX, mouseY)) {
-            this.sliderValue = (float) (mouseX - this.xPosition) / (float) this.width;
+            this.sliderValue = (float) (mouseX - (this.xPosition + 2)) / (float) (this.width - 4);
             this.sliderValue = Math.max(0.0F, Math.min(1.0F, this.sliderValue));
             this.dragging = true;
             updateDisplayString();
@@ -76,10 +78,24 @@ public class GuiSlider extends GuiButton {
     @Override
     public void drawButton(Minecraft mc, int mouseX, int mouseY) {
         if (this.visible) {
-            drawRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, TRACK_COLOR.getRGB());
-            int filledWidth = (int) (this.width * this.sliderValue);
-            drawRect(this.xPosition, this.yPosition, this.xPosition + filledWidth, this.yPosition + this.height, FILLED_COLOR.getRGB());
-            this.drawCenteredString(mc.fontRendererObj, this.displayString, this.xPosition + this.width / 2, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
+            boolean isHovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
+            
+            // Фон (трек)
+            drawRect(this.xPosition, this.yPosition + this.height / 2 - 2, this.xPosition + this.width, this.yPosition + this.height / 2 + 2, TRACK_COLOR.getRGB());
+            
+            // Заполненная часть трека
+            int filledWidth = (int) ((this.width - 8) * this.sliderValue);
+            drawRect(this.xPosition + 4, this.yPosition + this.height / 2 - 2, this.xPosition + 4 + filledWidth, this.yPosition + this.height / 2 + 2, FILLED_COLOR.getRGB());
+
+            // Рукоятка
+            int handleX = this.xPosition + filledWidth;
+            int handleSize = isHovered || this.dragging ? 10 : 8; // Рукоятка увеличивается при наведении
+            Color finalHandleColor = isHovered || this.dragging ? HANDLE_HOVER_COLOR : HANDLE_COLOR;
+            drawRect(handleX, this.yPosition + this.height / 2 - handleSize / 2, handleX + 4, this.yPosition + this.height / 2 + handleSize / 2, finalHandleColor.getRGB());
+
+            // Текст
+            mc.fontRendererObj.drawString(this.displayString, this.xPosition, this.yPosition - 10, 0xFFFFFF);
+            
             this.mouseDragged(mc, mouseX, mouseY);
         }
     }
