@@ -26,12 +26,12 @@ jobs:
         run: chmod +x ./gradlew
 
       # Шаг 4: Собираем мод с помощью Gradle
-      - name: Build with Gradle
-        run: ./gradlew build
+       - name: Build with Gradle
+    run: cd SimpleClickerMod && ./gradlew build
 
       # Шаг 5: Загружаем готовый .jar файл как артефакт (ИСПРАВЛЕНАЯ ВЕРСИЯ)
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: SimpleClickerMod-JAR
-          path: build/libs/*.jar
+       - name: Upload build artifact
+    uses: actions/upload-artifact@v4
+    with:
+      name: SimpleClickerMod-JAR
+      path: SimpleClickerMod/build/libs/*.jar
