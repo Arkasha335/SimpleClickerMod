@@ -5,6 +5,9 @@ public class ModConfig {
     // Глобальный переключатель
     public static boolean modEnabled = true;
 
+    // Переключатель для HUD
+    public static boolean hudEnabled = true;
+
     // Настройки ЛКМ
     public static boolean leftClickerEnabled = true;
     public static double leftCps = 12.0;
@@ -15,9 +18,7 @@ public class ModConfig {
     public static double rightCps = 12.0;
     public static double rightRandomization = 0.25;
 
-    // --- Управляющие флаги для потоков ---
-    // volatile гарантирует, что изменения одной переменной в одном потоке
-    // будут немедленно видны в другом потоке. Это критически важно.
+    // Управляющие флаги для потоков
     public static volatile boolean leftClickerActive = false;
     public static volatile boolean rightClickerActive = false;
 }

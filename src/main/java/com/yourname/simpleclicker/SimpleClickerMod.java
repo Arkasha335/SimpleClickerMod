@@ -10,28 +10,33 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
 @Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION)
 public class SimpleClickerMod {
 
     public static KeyBinding openSettingsKey;
+    public static KeyBinding toggleModKey; // Наша новая клавиша
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        // --- РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ И КЛАВИШ ---
         ClientEventHandler handler = new ClientEventHandler();
         FMLCommonHandler.instance().bus().register(handler);
         MinecraftForge.EVENT_BUS.register(handler);
-        openSettingsKey = new KeyBinding("key.settings", Keyboard.KEY_RSHIFT, "key.categories.simpleclicker");
+
+        // --- РЕГИСТРАЦИЯ КЛАВИШ ---
+        // Категория для наших биндов в меню управления
+        String category = "key.categories.simpleclicker"; 
+        
+        openSettingsKey = new KeyBinding("key.open_settings", Keyboard.KEY_RSHIFT, category);
+        // Создаем бинд для переключателя. -98 это код средней кнопки мыши.
+        toggleModKey = new KeyBinding("key.toggle_mod", -98, category); 
+
         ClientRegistry.registerKeyBinding(openSettingsKey);
+        ClientRegistry.registerKeyBinding(toggleModKey);
 
-        // --- ЗАПУСК НАШИХ ПОТОКОВ-КЛИКЕРОВ ---
-        // Создаем и запускаем поток для ЛКМ (индекс кнопки 0)
-        ClickerThread leftClicker = new ClickerThread(0);
-        leftClicker.start();
-
-        // Создаем и запускаем поток для ПКМ (индекс кнопки 1)
-        ClickerThread rightClicker = new ClickerThread(1);
-        rightClicker.start();
+        // --- ЗАПУСК ПОТОКОВ ---
+        new ClickerThread(0).start(); // ЛКМ
+        new ClickerThread(1).start(); // ПКМ
     }
 }
