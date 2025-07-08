@@ -3,13 +3,12 @@ package com.yourname.simpleclicker.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.renderer.GlStateManager;
-import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 
 public class GuiSlider extends GuiButton {
 
-    private float sliderValue;
     public boolean dragging;
+    private float sliderValue;
     private final String label;
     private final float valueMin, valueMax;
 
@@ -28,7 +27,8 @@ public class GuiSlider extends GuiButton {
 
     public float getValue() {
         float val = this.valueMin + (this.valueMax - this.valueMin) * this.sliderValue;
-        return (float) (Math.round(val * 10.0) / 10.0);
+        // Округляем до 1 знака после запятой для CPS
+        return (label.contains("CPS")) ? (float) (Math.round(val * 10.0) / 10.0) : val;
     }
 
     private void updateDisplayString() {
@@ -49,14 +49,9 @@ public class GuiSlider extends GuiButton {
         return false;
     }
 
-    @Override
-    public void mouseReleased(int mouseX, int mouseY) {
-        this.dragging = false;
-    }
-
     public void updateValue(int mouseX) {
         if (this.dragging) {
-            this.sliderValue = (float) (mouseX - this.xPosition) / (float) this.width;
+            this.sliderValue = (float) (mouseX - (this.xPosition + 4)) / (float) (this.width - 8);
             this.sliderValue = Math.max(0.0F, Math.min(1.0F, this.sliderValue));
             updateDisplayString();
         }
@@ -65,23 +60,24 @@ public class GuiSlider extends GuiButton {
     @Override
     public void drawButton(Minecraft mc, int mouseX, int mouseY) {
         if (this.visible) {
+            boolean hovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
+            
             mc.fontRendererObj.drawString(this.displayString, this.xPosition, this.yPosition, 0xFFFFFF);
             
             int sliderY = this.yPosition + 12;
-            int sliderHeight = 6;
-            boolean hovered = mouseX >= this.xPosition && mouseY >= sliderY && mouseX < this.xPosition + this.width && mouseY < sliderY + sliderHeight;
-
-            // Трек
+            int sliderHeight = 4;
+            
+            // Трек (основа слайдера)
             drawRect(this.xPosition, sliderY, this.xPosition + this.width, sliderY + sliderHeight, new Color(10, 10, 10, 200).getRGB());
             
             // Заполненная часть
-            int filledWidth = (int) (this.width * this.sliderValue);
-            drawGradientRect(this.xPosition, sliderY, this.xPosition + filledWidth, sliderY + sliderHeight, new Color(50, 100, 220).getRGB(), new Color(90, 150, 255).getRGB());
+            int filledWidth = (int) ((this.width - 8) * this.sliderValue) + 4;
+            drawGradientRect(this.xPosition, sliderY, this.xPosition + filledWidth, sliderY + sliderHeight, new Color(80, 130, 255).getRGB(), new Color(120, 170, 255).getRGB());
             
             // Рукоятка
-            int handleX = this.xPosition + filledWidth - 3;
-            int handleSize = hovered || this.dragging ? 12 : 8; // Анимация размера
-            drawRect(handleX, sliderY + sliderHeight/2 - handleSize/2, handleX + 6, sliderY + sliderHeight/2 + handleSize/2, Color.WHITE.getRGB());
+            int handleX = this.xPosition + filledWidth - 4;
+            int handleSize = hovered || this.dragging ? 10 : 8; // Анимация размера
+            drawRect(handleX, sliderY + sliderHeight/2 - handleSize/2, handleX + handleSize, sliderY + sliderHeight/2 + handleSize/2, Color.WHITE.getRGB());
         }
     }
 }
