@@ -8,27 +8,28 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.lang.reflect.Method;
+import java.awt.AWTException;
+import java.awt.Robot;
+import java.awt.event.InputEvent;
 import java.util.Random;
 
 public class ClientEventHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Random random = new Random();
+    private Robot robot;
+
+    // Возвращаемся к таймингу на основе миллисекунд
     private long nextLeftClickTime = 0;
     private long nextRightClickTime = 0;
 
-    // Снова используем рефлексию - это самый быстрый и надежный способ
-    private static Method clickMouseMethod;
-    private static Method rightClickMouseMethod;
-
-    static {
+    public ClientEventHandler() {
+        // Инициализируем Robot. Оборачиваем в try-catch на случай,
+        // если система не поддерживает симуляцию ввода.
         try {
-            clickMouseMethod = Minecraft.class.getDeclaredMethod("func_147116_af"); // clickMouse
-            rightClickMouseMethod = Minecraft.class.getDeclaredMethod("func_147121_ag"); // rightClickMouse
-            clickMouseMethod.setAccessible(true);
-            rightClickMouseMethod.setAccessible(true);
-        } catch (NoSuchMethodException e) {
+            this.robot = new Robot();
+        } catch (AWTException e) {
+            System.err.println("Failed to create Robot for autoclicker!");
             e.printStackTrace();
         }
     }
@@ -42,60 +43,47 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
+        // Проверяем только в конце тика
         if (event.phase == TickEvent.Phase.END) {
-            if (mc.thePlayer != null && mc.currentScreen == null && ModConfig.modEnabled) {
-                handleLeftClick();
-                handleRightClick();
+            // Если робот не создался, или мы не в игре - ничего не делаем
+            if (robot == null || !ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
+                return;
             }
+
+            // Используем новую логику
+            handleLeftClicker();
+            handleRightClicker();
         }
     }
 
-    private void handleLeftClick() {
+    private void handleLeftClicker() {
         if (ModConfig.leftClickerEnabled && mc.gameSettings.keyBindAttack.isKeyDown()) {
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextLeftClickTime) {
-                performLeftClick();
-                nextLeftClickTime = currentTime + calculateDelay(ModConfig.leftCps, ModConfig.leftRandomization);
+                // Выполняем системный клик
+                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                // Рассчитываем задержку до следующего клика
+                nextLeftClickTime = currentTime + calculateDelayInMillis(ModConfig.leftCps, ModConfig.leftRandomization);
             }
         }
     }
 
-    private void handleRightClick() {
-        // Проверяем, включен ли кликер и зажата ли кнопка
+    private void handleRightClicker() {
         if (ModConfig.rightClickerEnabled && mc.gameSettings.keyBindUseItem.isKeyDown()) {
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextRightClickTime) {
-                
-                // --- УЛУЧШЕННАЯ ЛОГИКА ДЛЯ ПКМ ---
-                // Выполняем первый клик
-                performRightClick();
-                
-                // ЭТО ИЗМЕНЕНИЕ: Немедленно вызываем второй клик, чтобы "усилить" нажатие.
-                // Это должно помочь с регистрацией установки блоков.
-                // Вместо вызова второго клика, который может сбить ритм,
-                // мы просто даем игре команду "отправить" клик. Это точнее.
-                // В 1.8.9 для этого лучше всего подходит вызов sendClickBlockToController.
-                // Однако, чтобы не усложнять рефлексией, простой повторный вызов rightClickMouse
-                // является самым безопасным методом для имитации.
-                // Мы не будем делать второй вызов, чтобы не сбивать CPS.
-                // Вместо этого, мы убедимся, что сама игра "думает", что кнопка зажата.
-                // Проблема, скорее всего, в том, что наш клик слишком быстрый.
-                
-                // ФИНАЛЬНОЕ РЕШЕНИЕ:
-                // Метод rightClickMouse() сам по себе идеален, он вызывает sendClickBlockToController.
-                // Проблема в том, что Keystrokes и другие моды его не видят.
-                // Возвращение к этому методу вернет скорость, но не решит проблему с Keystrokes.
-                
-                // Мы вернемся к САМОМУ первому варианту, который был быстрым.
-                // Проблема строительства, скорее всего, была связана с тиковой системой.
-                // Давайте убедимся, что оригинальный, быстрый код работает.
-                
-                nextRightClickTime = currentTime + calculateDelay(ModConfig.rightCps, ModConfig.rightRandomization);
+                // Выполняем системный клик
+                robot.mousePress(InputEvent.BUTTON3_DOWN_MASK); // BUTTON3 для ПКМ
+                robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+                // Рассчитываем задержку до следующего клика
+                nextRightClickTime = currentTime + calculateDelayInMillis(ModConfig.rightCps, ModConfig.rightRandomization);
             }
         }
     }
 
-    private long calculateDelay(double cps, double randomization) {
+    // Расчет задержки в миллисекундах
+    private long calculateDelayInMillis(double cps, double randomization) {
         if (cps <= 0) return 1000;
         double baseDelay = 1000.0 / cps;
         if (randomization > 0) {
@@ -103,25 +91,5 @@ public class ClientEventHandler {
             return (long) (baseDelay + randomOffset);
         }
         return (long) baseDelay;
-    }
-
-    private void performLeftClick() {
-        try {
-            if (clickMouseMethod != null) {
-                clickMouseMethod.invoke(mc);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void performRightClick() {
-        try {
-            if (rightClickMouseMethod != null) {
-                rightClickMouseMethod.invoke(mc);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }
