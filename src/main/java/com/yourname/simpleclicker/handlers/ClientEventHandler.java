@@ -20,62 +20,41 @@ public class ClientEventHandler {
         }
     }
 
-    /**
-     * Это сердце нашего нового мода. Он перехватывает события мыши ДО того,
-     * как их обработает игра.
-     */
     @SubscribeEvent
     public void onMouseEvent(MouseEvent event) {
-        // Проверяем, включен ли мод глобально и находимся ли мы в игре
         if (!ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
             return;
         }
 
-        // Обработка Левой Кнопки Мыши (индекс 0)
-        if (event.button == 0) {
+        if (event.button == 0) { // ЛКМ
             if (ModConfig.leftClickerEnabled) {
-                // Если кнопка была нажата (состояние true)
-                if (event.buttonstate) {
-                    // Мы отменяем оригинальное событие, чтобы игра его не видела.
+                if (event.buttonstate) { // Нажата
                     event.setCanceled(true);
-                    // И активируем наш поток-кликер.
                     ModConfig.leftClickerActive = true;
-                } else {
-                    // Если кнопка была отпущена, деактивируем поток.
+                } else { // Отпущена
                     ModConfig.leftClickerActive = false;
                 }
             }
         }
 
-        // Обработка Правой Кнопки Мыши (индекс 1)
-        if (event.button == 1) {
+        if (event.button == 1) { // ПКМ
             if (ModConfig.rightClickerEnabled) {
-                if (event.buttonstate) {
+                if (event.buttonstate) { // Нажата
                     event.setCanceled(true);
                     ModConfig.rightClickerActive = true;
-                } else {
+                } else { // Отпущена
                     ModConfig.rightClickerActive = false;
                 }
             }
         }
     }
 
-    /**
-     * Этот обработчик тиков теперь используется только как "предохранитель".
-     * Он отключает кликеры, если игрок открыл инвентарь или другое меню,
-     * чтобы избежать случайных кликов в интерфейсе.
-     */
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             if (mc.currentScreen != null) {
-                // Если открыт любой GUI, принудительно выключаем оба кликера.
-                if (ModConfig.leftClickerActive) {
-                    ModConfig.leftClickerActive = false;
-                }
-                if (ModConfig.rightClickerActive) {
-                    ModConfig.rightClickerActive = false;
-                }
+                if (ModConfig.leftClickerActive) ModConfig.leftClickerActive = false;
+                if (ModConfig.rightClickerActive) ModConfig.rightClickerActive = false;
             }
         }
     }
