@@ -2,17 +2,22 @@ package com.yourname.simpleclicker.config;
 
 public class ModConfig {
 
-    // Глобальное включение/выключение мода
+    // Глобальный переключатель
     public static boolean modEnabled = true;
 
-    // Настройки для Левой Кнопки Мыши
-    public static boolean leftClickerEnabled = false;
-    public static double leftCps = 10.0;
-    public static double leftRandomization = 0.2; // 20% рандомизации
+    // Настройки ЛКМ
+    public static boolean leftClickerEnabled = true;
+    public static double leftCps = 12.0;
+    public static double leftRandomization = 0.25;
 
-    // Настройки для Правой Кнопки Мыши
-    public static boolean rightClickerEnabled = false;
-    public static double rightCps = 10.0;
-    public static double rightRandomization = 0.2; // 20% рандомизации
+    // Настройки ПКМ
+    public static boolean rightClickerEnabled = true;
+    public static double rightCps = 12.0;
+    public static double rightRandomization = 0.25;
 
+    // --- Управляющие флаги для потоков ---
+    // volatile гарантирует, что изменения одной переменной в одном потоке
+    // будут немедленно видны в другом потоке. Это критически важно.
+    public static volatile boolean leftClickerActive = false;
+    public static volatile boolean rightClickerActive = false;
 }
