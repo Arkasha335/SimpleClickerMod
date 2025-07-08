@@ -6,27 +6,34 @@ import java.awt.Color;
 
 public class GuiColorButton extends GuiButton {
 
-    private final Color color;
-    // Цвет для тени
-    private static final Color SHADOW_COLOR = new Color(0, 0, 0, 80);
+    private final boolean isToggle;
 
-    public GuiColorButton(int buttonId, int x, int y, int width, int height, String buttonText, Color color) {
+    public GuiColorButton(int buttonId, int x, int y, int width, int height, String buttonText, boolean toggleStatus) {
         super(buttonId, x, y, width, height, buttonText);
-        this.color = color;
+        this.isToggle = true;
+        this.enabled = toggleStatus; // Используем enabled для хранения состояния
     }
 
     @Override
     public void drawButton(Minecraft mc, int mouseX, int mouseY) {
         if (this.visible) {
             boolean isHovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
-            Color finalColor = isHovered ? this.color.brighter().brighter() : this.color;
+            
+            // Определяем цвета для градиента
+            Color topColor = this.enabled ? new Color(50, 200, 50) : new Color(220, 50, 50);
+            Color bottomColor = topColor.darker();
+            if (isHovered) {
+                topColor = topColor.brighter();
+                bottomColor = bottomColor.brighter();
+            }
 
-            // Рисуем тень со смещением
-            drawRect(this.xPosition + 1, this.yPosition + 1, this.xPosition + this.width + 1, this.yPosition + this.height + 1, SHADOW_COLOR.getRGB());
-            // Рисуем основной фон кнопки
-            drawRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, finalColor.getRGB());
-            // Рисуем текст по центру
-            this.drawCenteredString(mc.fontRendererObj, this.displayString, this.xPosition + this.width / 2, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
+            // Рисуем градиентный фон
+            drawGradientRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, topColor.getRGB(), bottomColor.getRGB());
+            
+            // Рисуем текст и иконку
+            String statusIcon = this.enabled ? "§a✔" : "§c✖";
+            mc.fontRendererObj.drawStringWithShadow(this.displayString, this.xPosition + 5, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow(statusIcon, this.xPosition + this.width - 15, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
         }
     }
 }
