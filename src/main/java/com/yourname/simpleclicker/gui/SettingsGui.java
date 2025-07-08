@@ -3,16 +3,13 @@ package com.yourname.simpleclicker.gui;
 import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.GlStateManager;
 import java.awt.Color;
 import java.io.IOException;
 
 public class SettingsGui extends GuiScreen {
 
-    // Цвета для GUI
     private static final Color COLOR_GREEN = new Color(50, 180, 50);
     private static final Color COLOR_RED = new Color(200, 50, 50);
-    private static final Color COLOR_BLUE = new Color(70, 130, 255);
     private static final Color PANEL_BG = new Color(20, 20, 20, 200);
     private static final Color PANEL_BORDER = new Color(80, 80, 80, 200);
 
@@ -22,11 +19,9 @@ public class SettingsGui extends GuiScreen {
         int centerX = this.width / 2;
         int yPos = this.height / 4 + 20;
 
-        // --- Глобальные настройки ---
         this.buttonList.add(new GuiColorButton(0, centerX - 100, yPos, 200, 20, "Mod Enabled", ModConfig.modEnabled ? COLOR_GREEN : COLOR_RED));
         yPos += 40;
 
-        // --- Колонки ---
         int columnLeft = centerX - 160;
         int columnRight = centerX + 10;
         int sliderWidth = 150;
@@ -34,14 +29,12 @@ public class SettingsGui extends GuiScreen {
         int yPosLeft = yPos;
         int yPosRight = yPos;
 
-        // --- Левая колонка (ЛКМ) ---
         this.buttonList.add(new GuiColorButton(1, columnLeft, yPosLeft, sliderWidth, buttonHeight, "Left Clicker", ModConfig.leftClickerEnabled ? COLOR_GREEN : COLOR_RED));
         yPosLeft += 24;
         this.buttonList.add(new GuiSlider(3, columnLeft, yPosLeft, sliderWidth, buttonHeight, "CPS", 1.0f, 50.0f, (float) ModConfig.leftCps));
         yPosLeft += 24;
         this.buttonList.add(new GuiSlider(4, columnLeft, yPosLeft, sliderWidth, buttonHeight, "Randomization", 0.0f, 1.0f, (float) ModConfig.leftRandomization));
 
-        // --- Правая колонка (ПКМ) ---
         this.buttonList.add(new GuiColorButton(2, columnRight, yPosRight, sliderWidth, buttonHeight, "Right Clicker", ModConfig.rightClickerEnabled ? COLOR_GREEN : COLOR_RED));
         yPosRight += 24;
         this.buttonList.add(new GuiSlider(5, columnRight, yPosRight, sliderWidth, buttonHeight, "CPS", 1.0f, 50.0f, (float) ModConfig.rightCps));
@@ -52,25 +45,21 @@ public class SettingsGui extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
         if (!button.enabled) return;
-        // Обрабатываем только цветные кнопки, так как слайдеры обновляются сами
         if (button instanceof GuiColorButton) {
             switch (button.id) {
                 case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
                 case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
                 case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
             }
-            // Пересоздаем GUI, чтобы обновить цвета кнопок
             this.initGui();
         }
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        // --- Логика обновления слайдеров (ИСПРАВЛЕНИЕ) ---
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider) {
                 GuiSlider slider = (GuiSlider) button;
-                // Обновляем конфиг, только если слайдер перетаскивается
                 if (slider.isDragging()) {
                     switch (slider.id) {
                         case 3: ModConfig.leftCps = slider.getValue(); break;
@@ -82,22 +71,18 @@ public class SettingsGui extends GuiScreen {
             }
         }
         
-        // --- Отрисовка "крутого" фона ---
         this.drawDefaultBackground();
         int panelWidth = 350;
         int panelHeight = 150;
         int startX = (this.width - panelWidth) / 2;
         int startY = (this.height - panelHeight) / 2 - 20;
 
-        // Рисуем фон панели
         drawRect(startX, startY, startX + panelWidth, startY + panelHeight, PANEL_BG.getRGB());
-        // Рисуем рамку
-        this.drawHorizontalLine(startX, startX + panelWidth, startY, PANEL_BORDER.getRGB()); // Верхняя
-        this.drawHorizontalLine(startX, startX + panelWidth, startY + panelHeight, PANEL_BORDER.getRGB()); // Нижняя
-        this.drawVerticalLine(startX, startY, startY + panelHeight, PANEL_BORDER.getRGB()); // Левая
-        this.drawVerticalLine(startX + panelWidth, startY, startY + panelHeight, PANEL_BORDER.getRGB()); // Правая
+        this.drawHorizontalLine(startX, startX + panelWidth -1, startY, PANEL_BORDER.getRGB());
+        this.drawHorizontalLine(startX, startX + panelWidth -1, startY + panelHeight -1, PANEL_BORDER.getRGB());
+        this.drawVerticalLine(startX, startY, startY + panelHeight -1, PANEL_BORDER.getRGB());
+        this.drawVerticalLine(startX + panelWidth -1, startY, startY + panelHeight -1, PANEL_BORDER.getRGB());
         
-        // --- Отрисовка текста и кнопок ---
         this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker Settings", this.width / 2, this.height / 4, Color.WHITE.getRGB());
         
         super.drawScreen(mouseX, mouseY, partialTicks);
