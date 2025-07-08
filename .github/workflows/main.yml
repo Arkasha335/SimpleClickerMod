@@ -22,9 +22,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # ГЛАВНОЕ ИЗМЕНЕНИЕ: ЗАСТАВЛЯЕМ GRADLE ВЫВОДИТЬ ВСЕ ОШИБКИ
-      - name: Build with Gradle (with diagnostics)
-        run: ./gradlew build --no-daemon --stacktrace --info --scan
+      - name: Build with Gradle
+        run: ./gradlew build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
