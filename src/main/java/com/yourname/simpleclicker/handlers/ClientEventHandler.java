@@ -15,8 +15,14 @@ public class ClientEventHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Random random = new Random();
-    private long nextLeftClickTime = 0;
-    private long nextRightClickTime = 0;
+
+    // Задержки теперь считаются в тиках, а не миллисекундах
+    private int leftClickerDelay = 0;
+    private int rightClickerDelay = 0;
+
+    // Флаги, чтобы знать, когда нужно "отпустить" кнопку
+    private boolean leftClicking = false;
+    private boolean rightClicking = false;
 
     @SubscribeEvent
     public void onKeyInput(KeyInputEvent event) {
@@ -27,61 +33,83 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            // Оптимизация: выходим сразу, если мод выключен или мы не в игре
+        // Мы работаем только в начале тика, чтобы другие моды успели среагировать
+        if (event.phase == TickEvent.Phase.START) {
             if (!ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
+                // Если мод выключается, сбрасываем состояние кнопок, чтобы они не остались "зажатыми"
+                if (leftClicking) {
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(), false);
+                    leftClicking = false;
+                }
+                if (rightClicking) {
+                    KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
+                    rightClicking = false;
+                }
                 return;
             }
-            handleLeftClick();
-            handleRightClick();
+
+            // --- НОВАЯ ЛОГИКА ---
+            handleLeftClicker();
+            handleRightClicker();
         }
     }
 
-    private void handleLeftClick() {
-        if (ModConfig.leftClickerEnabled && mc.gameSettings.keyBindAttack.isKeyDown()) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime >= nextLeftClickTime) {
-                performLeftClick();
-                nextLeftClickTime = currentTime + calculateDelay(ModConfig.leftCps, ModConfig.leftRandomization);
-            }
+    private void handleLeftClicker() {
+        KeyBinding key = mc.gameSettings.keyBindAttack;
+
+        // Если мы кликали в прошлом тике, отпускаем кнопку сейчас
+        if (leftClicking) {
+            KeyBinding.setKeyBindState(key.getKeyCode(), false);
+            leftClicking = false;
+        }
+
+        // Если задержка еще не прошла, уменьшаем ее и выходим
+        if (leftClickerDelay > 0) {
+            leftClickerDelay--;
+            return;
+        }
+        
+        // Проверяем, включен ли кликер и зажата ли кнопка игроком
+        if (ModConfig.leftClickerEnabled && key.isKeyDown()) {
+            // "Нажимаем" кнопку виртуально
+            KeyBinding.setKeyBindState(key.getKeyCode(), true);
+            // Устанавливаем флаг, чтобы отпустить ее на следующем тике
+            leftClicking = true;
+            // Рассчитываем задержку до следующего клика в тиках
+            leftClickerDelay = calculateDelayInTicks(ModConfig.leftCps, ModConfig.leftRandomization);
         }
     }
 
-    private void handleRightClick() {
-        if (ModConfig.rightClickerEnabled && mc.gameSettings.keyBindUseItem.isKeyDown()) {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime >= nextRightClickTime) {
-                performRightClick();
-                nextRightClickTime = currentTime + calculateDelay(ModConfig.rightCps, ModConfig.rightRandomization);
-            }
+    private void handleRightClicker() {
+        KeyBinding key = mc.gameSettings.keyBindUseItem;
+
+        if (rightClicking) {
+            KeyBinding.setKeyBindState(key.getKeyCode(), false);
+            rightClicking = false;
+        }
+
+        if (rightClickerDelay > 0) {
+            rightClickerDelay--;
+            return;
+        }
+
+        if (ModConfig.rightClickerEnabled && key.isKeyDown()) {
+            KeyBinding.setKeyBindState(key.getKeyCode(), true);
+            rightClicking = true;
+            rightClickerDelay = calculateDelayInTicks(ModConfig.rightCps, ModConfig.rightRandomization);
         }
     }
 
-    private long calculateDelay(double cps, double randomization) {
-        if (cps <= 0) return 1000;
-        double baseDelay = 1000.0 / cps;
+    // Расчет задержки в тиках (1 секунда = 20 тиков)
+    private int calculateDelayInTicks(double cps, double randomization) {
+        if (cps <= 0) return 20;
+        double ticksPerSecond = 20.0;
+        double baseDelay = ticksPerSecond / cps;
         if (randomization > 0) {
             double randomOffset = (random.nextDouble() - 0.5) * baseDelay * randomization;
-            return (long) (baseDelay + randomOffset);
+            // Убеждаемся, что задержка не меньше 1 тика
+            return Math.max(1, (int) Math.round(baseDelay + randomOffset));
         }
-        return (long) baseDelay;
-    }
-
-    // НОВАЯ, ПРАВИЛЬНАЯ РЕАЛИЗАЦИЯ КЛИКОВ
-    private void performLeftClick() {
-        KeyBinding key = mc.gameSettings.keyBindAttack;
-        // Нажимаем клавишу виртуально
-        KeyBinding.setKeyBindState(key.getKeyCode(), true);
-        // Заставляем игру обработать это нажатие
-        KeyBinding.onTick(key.getKeyCode());
-        // Сразу же отпускаем, чтобы симулировать одиночный клик
-        KeyBinding.setKeyBindState(key.getKeyCode(), false);
-    }
-
-    private void performRightClick() {
-        KeyBinding key = mc.gameSettings.keyBindUseItem;
-        KeyBinding.setKeyBindState(key.getKeyCode(), true);
-        KeyBinding.onTick(key.getKeyCode());
-        KeyBinding.setKeyBindState(key.getKeyCode(), false);
+        return Math.max(1, (int) Math.round(baseDelay));
     }
 }
