@@ -42,37 +42,31 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 65, sliderWidth, 20, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
     }
 
-    // --- ПРАВИЛЬНАЯ ЛОГИКА ОБРАБОТКИ СОБЫТИЙ ---
-
-    @Override
-    protected void mousePressed(int mouseX, int mouseY, int mouseButton) throws IOException {
-        // Вызываем mousePressed для всех кнопок, чтобы они могли установить свои флаги (например, dragging у слайдера)
-        super.mousePressed(mouseX, mouseY, mouseButton);
-    }
-
-    @Override
-    protected void mouseReleased(int mouseX, int mouseY, int state) {
-        // Вызываем mouseReleased для всех кнопок, чтобы они могли сбросить свои флаги
-        super.mouseReleased(mouseX, mouseY, state);
-    }
-
+    // --- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ МЕТОД ДЛЯ 1.8.9 ---
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
-        // Этот метод будет вызываться для каждого кадра, пока мышь зажата и двигается.
-        // Мы передаем управление каждому слайдеру.
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider) {
                 GuiSlider slider = (GuiSlider) button;
-                // Если слайдер в режиме перетаскивания, он сам обновит свое значение.
                 if (slider.dragging) {
-                    slider.mouseDragged(mc, mouseX, mouseY);
-                    updateConfigFromSlider(slider); // И мы сразу же обновляем конфиг
+                    slider.updateValue(mouseX);
+                    updateConfigFromSlider(slider);
                 }
             }
         }
     }
-    
+
+    @Override
+    protected void mouseReleased(int mouseX, int mouseY, int state) {
+        super.mouseReleased(mouseX, mouseY, state);
+        for (GuiButton button : this.buttonList) {
+            if (button instanceof GuiSlider) {
+                ((GuiSlider) button).dragging = false;
+            }
+        }
+    }
+
     private void updateConfigFromSlider(GuiSlider slider) {
         switch (slider.id) {
             case 3: ModConfig.leftCps = slider.getValue(); break;
@@ -82,7 +76,6 @@ public class SettingsGui extends GuiScreen {
         }
     }
 
-    // actionPerformed теперь отвечает ТОЛЬКО за кнопки, но не за слайдеры.
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
         if (button instanceof GuiColorButton) {
@@ -97,8 +90,6 @@ public class SettingsGui extends GuiScreen {
             mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
         }
     }
-    
-    // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -115,7 +106,7 @@ public class SettingsGui extends GuiScreen {
         drawRoundedRect(startX - 1, startY - 1, startX + panelWidth + 1, startY + panelHeight + 1, 7, animatedColor.getRGB());
         drawRoundedRect(startX, startY, startX + panelWidth, startY + panelHeight, 6, new Color(25, 25, 25, 230).getRGB());
         
-        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v5.0 Final", this.width / 2, startY + 15, Color.WHITE.getRGB());
+        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v5.1 Final", this.width / 2, startY + 15, Color.WHITE.getRGB());
         
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
