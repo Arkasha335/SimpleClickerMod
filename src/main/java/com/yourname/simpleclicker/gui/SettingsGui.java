@@ -11,16 +11,15 @@ import java.io.IOException;
 public class SettingsGui extends GuiScreen {
 
     private float hue = 0.0f;
-    private int panelWidth, panelHeight, startX, startY;
 
     @Override
     public void initGui() {
         this.buttonList.clear();
         
-        panelWidth = 340;
-        panelHeight = 210;
-        startX = (this.width - panelWidth) / 2;
-        startY = (this.height - panelHeight) / 2;
+        int panelWidth = 340;
+        int panelHeight = 210;
+        int startX = (this.width - panelWidth) / 2;
+        int startY = (this.height - panelHeight) / 2;
 
         int buttonY = startY + 45;
         this.buttonList.add(new GuiColorButton(0, startX + 20, buttonY, panelWidth - 40, 20, "§lMod Enabled", ModConfig.modEnabled));
@@ -43,55 +42,63 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 65, sliderWidth, 20, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
     }
 
+    // --- ПРАВИЛЬНАЯ ЛОГИКА ОБРАБОТКИ СОБЫТИЙ ---
+
     @Override
-    protected void actionPerformed(GuiButton button) throws IOException {
-        // --- ИСПРАВЛЕННАЯ ЛОГИКА ---
-        switch (button.id) {
-            case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
-            case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
-            case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
-            case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
-            case 8:
-                mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
-                return; // Выходим, чтобы не пересоздавать GUI
-        }
-        // После изменения конфига, просто пересоздаем весь GUI.
-        // Он автоматически считает новые значения и создаст кнопки с правильным видом.
-        this.initGui();
+    protected void mousePressed(int mouseX, int mouseY, int mouseButton) throws IOException {
+        // Вызываем mousePressed для всех кнопок, чтобы они могли установить свои флаги (например, dragging у слайдера)
+        super.mousePressed(mouseX, mouseY, mouseButton);
+    }
+
+    @Override
+    protected void mouseReleased(int mouseX, int mouseY, int state) {
+        // Вызываем mouseReleased для всех кнопок, чтобы они могли сбросить свои флаги
+        super.mouseReleased(mouseX, mouseY, state);
     }
 
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+        // Этот метод будет вызываться для каждого кадра, пока мышь зажата и двигается.
+        // Мы передаем управление каждому слайдеру.
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider) {
-                ((GuiSlider) button).updateValue(mouseX);
-            }
-        }
-        updateConfigFromSliders();
-    }
-    @Override
-    protected void mouseReleased(int mouseX, int mouseY, int state) {
-        super.mouseReleased(mouseX, mouseY, state);
-        for (GuiButton button : this.buttonList) {
-            if (button instanceof GuiSlider) {
-                ((GuiSlider) button).dragging = false;
-            }
-        }
-    }
-    private void updateConfigFromSliders() {
-        for (GuiButton button : this.buttonList) {
-            if (button instanceof GuiSlider) {
                 GuiSlider slider = (GuiSlider) button;
-                switch (slider.id) {
-                    case 3: ModConfig.leftCps = slider.getValue(); break;
-                    case 4: ModConfig.leftRandomization = slider.getValue(); break;
-                    case 5: ModConfig.rightCps = slider.getValue(); break;
-                    case 6: ModConfig.rightRandomization = slider.getValue(); break;
+                // Если слайдер в режиме перетаскивания, он сам обновит свое значение.
+                if (slider.dragging) {
+                    slider.mouseDragged(mc, mouseX, mouseY);
+                    updateConfigFromSlider(slider); // И мы сразу же обновляем конфиг
                 }
             }
         }
     }
+    
+    private void updateConfigFromSlider(GuiSlider slider) {
+        switch (slider.id) {
+            case 3: ModConfig.leftCps = slider.getValue(); break;
+            case 4: ModConfig.leftRandomization = slider.getValue(); break;
+            case 5: ModConfig.rightCps = slider.getValue(); break;
+            case 6: ModConfig.rightRandomization = slider.getValue(); break;
+        }
+    }
+
+    // actionPerformed теперь отвечает ТОЛЬКО за кнопки, но не за слайдеры.
+    @Override
+    protected void actionPerformed(GuiButton button) throws IOException {
+        if (button instanceof GuiColorButton) {
+            switch (button.id) {
+                case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
+                case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
+                case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
+                case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
+            }
+            this.initGui();
+        } else if (button.id == 8) {
+            mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
+        }
+    }
+    
+    // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -100,16 +107,21 @@ public class SettingsGui extends GuiScreen {
         Color animatedColor = Color.getHSBColor(hue, 0.8f, 1.0f);
 
         this.drawDefaultBackground();
+        int panelWidth = 340;
+        int panelHeight = 210;
+        int startX = (this.width - panelWidth) / 2;
+        int startY = (this.height - panelHeight) / 2;
+        
         drawRoundedRect(startX - 1, startY - 1, startX + panelWidth + 1, startY + panelHeight + 1, 7, animatedColor.getRGB());
         drawRoundedRect(startX, startY, startX + panelWidth, startY + panelHeight, 6, new Color(25, 25, 25, 230).getRGB());
         
-        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v4.1", this.width / 2, startY + 15, Color.WHITE.getRGB());
+        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v5.0 Final", this.width / 2, startY + 15, Color.WHITE.getRGB());
         
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
     
     public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
-        // Код этого метода не менялся, но он все еще нужен
+        // Вспомогательный метод отрисовки
         GL11.glPushAttrib(0);
         GL11.glScaled(0.5D, 0.5D, 0.5D);
         x *= 2; y *= 2; x2 *= 2; y2 *= 2; rad *= 2;
