@@ -6,12 +6,12 @@ import java.awt.Color;
 
 public class GuiColorButton extends GuiButton {
 
-    private final boolean isToggle;
+    private final boolean active; // Используем свое собственное поле для хранения состояния
 
-    public GuiColorButton(int buttonId, int x, int y, int width, int height, String buttonText, boolean toggleStatus) {
+    public GuiColorButton(int buttonId, int x, int y, int width, int height, String buttonText, boolean isActive) {
         super(buttonId, x, y, width, height, buttonText);
-        this.isToggle = true;
-        this.enabled = toggleStatus; // Используем стандартное поле enabled для хранения состояния
+        this.active = isActive;
+        // this.enabled теперь всегда true по умолчанию, и мы его не трогаем
     }
 
     @Override
@@ -19,8 +19,8 @@ public class GuiColorButton extends GuiButton {
         if (this.visible) {
             boolean isHovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
 
-            // Определяем цвета для градиента
-            Color topColor = this.enabled ? new Color(20, 140, 50) : new Color(160, 40, 40);
+            // Определяем цвета для градиента на основе НАШЕГО поля 'active'
+            Color topColor = this.active ? new Color(20, 140, 50) : new Color(160, 40, 40);
             Color bottomColor = topColor.darker().darker();
             if (isHovered) {
                 topColor = topColor.brighter();
@@ -33,7 +33,7 @@ public class GuiColorButton extends GuiButton {
             drawGradientRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, topColor.getRGB(), bottomColor.getRGB());
             
             // Рисуем текст и иконку-статус
-            String statusIcon = this.enabled ? "§a✔" : "§c✖";
+            String statusIcon = this.active ? "§a✔" : "§c✖";
             mc.fontRendererObj.drawStringWithShadow(this.displayString, this.xPosition + 8, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
             mc.fontRendererObj.drawStringWithShadow(statusIcon, this.xPosition + this.width - 18, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
         }

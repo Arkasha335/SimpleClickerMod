@@ -4,7 +4,6 @@ import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.GlStateManager; // <--- ВОТ ОНА, НЕДОСТАЮЩАЯ СТРОКА
 import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 import java.io.IOException;
@@ -46,19 +45,19 @@ public class SettingsGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
-        if (button instanceof GuiColorButton) {
-            switch (button.id) {
-                case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
-                case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
-                case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
-                case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
-            }
-            // Эта строка была ошибочной, правильная логика теперь в конструкторе и drawButton
-            // ((GuiColorButton) button).enabled = !((GuiColorButton) button).enabled;
-            this.initGui(); // Пересоздаем GUI, чтобы обновить кнопки
-        } else if (button.id == 8) {
-            mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
+        // --- ИСПРАВЛЕННАЯ ЛОГИКА ---
+        switch (button.id) {
+            case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
+            case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
+            case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
+            case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
+            case 8:
+                mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
+                return; // Выходим, чтобы не пересоздавать GUI
         }
+        // После изменения конфига, просто пересоздаем весь GUI.
+        // Он автоматически считает новые значения и создаст кнопки с правильным видом.
+        this.initGui();
     }
 
     @Override
@@ -104,24 +103,25 @@ public class SettingsGui extends GuiScreen {
         drawRoundedRect(startX - 1, startY - 1, startX + panelWidth + 1, startY + panelHeight + 1, 7, animatedColor.getRGB());
         drawRoundedRect(startX, startY, startX + panelWidth, startY + panelHeight, 6, new Color(25, 25, 25, 230).getRGB());
         
-        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v4.0", this.width / 2, startY + 15, Color.WHITE.getRGB());
+        this.drawCenteredString(this.fontRendererObj, "§lSimpleClicker v4.1", this.width / 2, startY + 15, Color.WHITE.getRGB());
         
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
     
     public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
+        // Код этого метода не менялся, но он все еще нужен
         GL11.glPushAttrib(0);
         GL11.glScaled(0.5D, 0.5D, 0.5D);
         x *= 2; y *= 2; x2 *= 2; y2 *= 2; rad *= 2;
-        GlStateManager.enableBlend(); GlStateManager.disableTexture2D();
-        GlStateManager.color((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, (color >> 24 & 255) / 255.0F);
+        net.minecraft.client.renderer.GlStateManager.enableBlend(); net.minecraft.client.renderer.GlStateManager.disableTexture2D();
+        net.minecraft.client.renderer.GlStateManager.color((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, (color >> 24 & 255) / 255.0F);
         GL11.glBegin(GL11.GL_POLYGON);
         for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y + rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
         for (int i = 90; i <= 180; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y2 - rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
         for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x2 - rad + Math.sin(Math.toRadians(i)) * rad, y2 - rad + Math.cos(Math.toRadians(i)) * rad);
         for (int i = 90; i <= 180; i += 3) GL11.glVertex2d(x2 - rad + Math.sin(Math.toRadians(i)) * rad, y + rad + Math.cos(Math.toRadians(i)) * rad);
         GL11.glEnd();
-        GlStateManager.enableTexture2D(); GlStateManager.disableBlend();
+        net.minecraft.client.renderer.GlStateManager.enableTexture2D(); net.minecraft.client.renderer.GlStateManager.disableBlend();
         GL11.glScaled(2.0D, 2.0D, 2.0D);
         GL11.glPopAttrib();
     }
