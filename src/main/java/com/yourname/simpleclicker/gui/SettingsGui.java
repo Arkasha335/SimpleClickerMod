@@ -4,6 +4,7 @@ import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager; // <--- ВОТ ОНА, НЕДОСТАЮЩАЯ СТРОКА
 import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 import java.io.IOException;
@@ -18,7 +19,7 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.clear();
         
         panelWidth = 340;
-        panelHeight = 210; // Сделали чуть выше для отступов
+        panelHeight = 210;
         startX = (this.width - panelWidth) / 2;
         startY = (this.height - panelHeight) / 2;
 
@@ -52,14 +53,14 @@ public class SettingsGui extends GuiScreen {
                 case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
                 case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
             }
-            // Передаем состояние в кнопку, чтобы она правильно отображалась
-            ((GuiColorButton) button).enabled = !((GuiColorButton) button).enabled;
+            // Эта строка была ошибочной, правильная логика теперь в конструкторе и drawButton
+            // ((GuiColorButton) button).enabled = !((GuiColorButton) button).enabled;
+            this.initGui(); // Пересоздаем GUI, чтобы обновить кнопки
         } else if (button.id == 8) {
             mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
         }
     }
 
-    // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЛОГИКИ СЛАЙДЕРОВ ---
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
@@ -92,7 +93,6 @@ public class SettingsGui extends GuiScreen {
             }
         }
     }
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -110,7 +110,6 @@ public class SettingsGui extends GuiScreen {
     }
     
     public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
-        // Статический метод для отрисовки, остается без изменений
         GL11.glPushAttrib(0);
         GL11.glScaled(0.5D, 0.5D, 0.5D);
         x *= 2; y *= 2; x2 *= 2; y2 *= 2; rad *= 2;
