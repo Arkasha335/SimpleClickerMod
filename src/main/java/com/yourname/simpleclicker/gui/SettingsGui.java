@@ -4,6 +4,7 @@ import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
 import java.awt.Color;
 import java.io.IOException;
@@ -30,15 +31,19 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiButton(8, startX + (panelWidth / 2) + 5, buttonY, (panelWidth / 2) - 25, 20, "Rebind Keys"));
         
         buttonY += 35;
+        // Разделительная линия
         drawHorizontalLine(startX + 20, startX + panelWidth - 20, buttonY, new Color(80, 80, 80).getRGB());
         buttonY += 10;
+
         this.buttonList.add(new GuiColorButton(10, startX + 20, buttonY, (panelWidth / 2) - 25, 20, "§lBridger Assist", ModConfig.bridgerEnabled));
         String modeName = "Mode: §b" + ModConfig.currentBridgeMode.getDisplayName();
         this.buttonList.add(new GuiButton(11, startX + (panelWidth / 2) + 5, buttonY, (panelWidth / 2) - 25, 20, modeName));
         
         buttonY += 35;
+        // Разделительная линия
         drawHorizontalLine(startX + 20, startX + panelWidth - 20, buttonY, new Color(80, 80, 80).getRGB());
         buttonY += 10;
+
         int columnLeft = startX + 20;
         int columnRight = startX + panelWidth / 2 + 5;
         int sliderWidth = (panelWidth / 2) - 25;
@@ -54,18 +59,26 @@ public class SettingsGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
-        switch (button.id) {
-            case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
-            case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
-            case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
-            case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
-            case 8: mc.displayGuiScreen(new GuiControls(this, mc.gameSettings)); return;
-            case 10: ModConfig.bridgerEnabled = !ModConfig.bridgerEnabled; break;
-            case 11: ModConfig.currentBridgeMode = ModConfig.currentBridgeMode.getNext(); break;
+        // --- ИСПРАВЛЕННАЯ ЛОГИКА ВКЛЮЧЕНИЯ/ВЫКЛЮЧЕНИЯ ---
+        if (button instanceof GuiColorButton) {
+            switch (button.id) {
+                case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
+                case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
+                case 2: ModConfig.rightClickerEnabled = !ModConfig.rightClickerEnabled; break;
+                case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
+                case 10: ModConfig.bridgerEnabled = !ModConfig.bridgerEnabled; break;
+            }
+            // Пересоздаем GUI, чтобы обновить состояние и цвета кнопок
+            this.initGui(); 
+        } else if (button.id == 8) {
+            mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
+        } else if (button.id == 11) {
+            ModConfig.currentBridgeMode = ModConfig.currentBridgeMode.getNext();
+            // Пересоздаем GUI, чтобы обновить текст на кнопке выбора режима
+            this.initGui();
         }
-        this.initGui();
     }
-    
+
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
@@ -76,7 +89,6 @@ public class SettingsGui extends GuiScreen {
         }
         updateConfigFromSliders();
     }
-
     @Override
     protected void mouseReleased(int mouseX, int mouseY, int state) {
         super.mouseReleased(mouseX, mouseY, state);
@@ -86,7 +98,6 @@ public class SettingsGui extends GuiScreen {
             }
         }
     }
-
     private void updateConfigFromSliders() {
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider) {
@@ -117,9 +128,9 @@ public class SettingsGui extends GuiScreen {
     }
     
     public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
-        net.minecraft.client.renderer.GlStateManager.enableBlend();
-        net.minecraft.client.renderer.GlStateManager.disableTexture2D();
-        net.minecraft.client.renderer.GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+        GlStateManager.enableBlend();
+        GlStateManager.disableTexture2D();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
         
         float f3 = (float)(color >> 24 & 255) / 255.0F;
         float f = (float)(color >> 16 & 255) / 255.0F;
