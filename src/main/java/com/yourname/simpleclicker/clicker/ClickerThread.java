@@ -1,4 +1,3 @@
-java
 package com.yourname.simpleclicker.clicker;
 
 import com.yourname.simpleclicker.config.ModConfig;

@@ -1,6 +1,7 @@
 package com.yourname.simpleclicker.gui;
 
 import com.yourname.simpleclicker.config.ModConfig;
+import com.yourname.simpleclicker.bridge.BridgeMode;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiControls;
 import net.minecraft.client.gui.GuiScreen;
@@ -31,7 +32,6 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiButton(8, startX + (panelWidth / 2) + 5, buttonY, (panelWidth / 2) - 25, 20, "Rebind Keys"));
         
         buttonY += 35;
-        // Разделительная линия
         drawHorizontalLine(startX + 20, startX + panelWidth - 20, buttonY, new Color(80, 80, 80).getRGB());
         buttonY += 10;
 
@@ -40,7 +40,6 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiButton(11, startX + (panelWidth / 2) + 5, buttonY, (panelWidth / 2) - 25, 20, modeName));
         
         buttonY += 35;
-        // Разделительная линия
         drawHorizontalLine(startX + 20, startX + panelWidth - 20, buttonY, new Color(80, 80, 80).getRGB());
         buttonY += 10;
 
@@ -59,7 +58,6 @@ public class SettingsGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
-        // --- ИСПРАВЛЕННАЯ ЛОГИКА ВКЛЮЧЕНИЯ/ВЫКЛЮЧЕНИЯ ---
         if (button instanceof GuiColorButton) {
             switch (button.id) {
                 case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
@@ -68,13 +66,11 @@ public class SettingsGui extends GuiScreen {
                 case 7: ModConfig.hudEnabled = !ModConfig.hudEnabled; break;
                 case 10: ModConfig.bridgerEnabled = !ModConfig.bridgerEnabled; break;
             }
-            // Пересоздаем GUI, чтобы обновить состояние и цвета кнопок
-            this.initGui(); 
+            this.initGui();
         } else if (button.id == 8) {
             mc.displayGuiScreen(new GuiControls(this, mc.gameSettings));
         } else if (button.id == 11) {
             ModConfig.currentBridgeMode = ModConfig.currentBridgeMode.getNext();
-            // Пересоздаем GUI, чтобы обновить текст на кнопке выбора режима
             this.initGui();
         }
     }
