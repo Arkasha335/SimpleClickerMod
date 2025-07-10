@@ -1,31 +1,58 @@
+java
 package com.yourname.simpleclicker.clicker;
 
 import com.yourname.simpleclicker.config.ModConfig;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.KeyBinding;
+import java.awt.AWTException;
+import java.awt.Robot;
+import java.awt.event.InputEvent;
 import java.util.Random;
 
 public class ClickerThread extends Thread {
 
     private final int button;
     private final Random random = new Random();
-    private final Minecraft mc = Minecraft.getMinecraft();
+    private Robot robot;
+    private final int mouseButtonMask;
 
     public ClickerThread(int button) {
         super("ClickerThread-" + (button == 0 ? "Left" : "Right"));
         this.button = button;
+
+        if (button == 0) {
+            this.mouseButtonMask = InputEvent.BUTTON1_DOWN_MASK;
+        } else {
+            this.mouseButtonMask = InputEvent.BUTTON3_DOWN_MASK;
+        }
+
+        try {
+            this.robot = new Robot();
+        } catch (AWTException e) {
+            System.err.println("Failed to initialize Robot for clicker thread. Clicker will not work.");
+            e.printStackTrace();
+            this.robot = null;
+        }
     }
 
     @Override
     public void run() {
         while (true) {
             try {
+                if (robot == null) {
+                    Thread.sleep(5000);
+                    continue;
+                }
+                
+                Thread.sleep(10);
+
                 boolean isActive = (button == 0) ? ModConfig.leftClickerActive : ModConfig.rightClickerActive;
                 boolean isEnabled = (button == 0) ? ModConfig.leftClickerEnabled : ModConfig.rightClickerEnabled;
 
                 if (!ModConfig.modEnabled || !isActive || !isEnabled) {
-                    // Если кликер неактивен, спим дольше, чтобы не тратить ресурсы
-                    Thread.sleep(100);
+                    continue;
+                }
+
+                // Новая проверка для Bridger
+                if (!ModConfig.canPlaceBlocks) {
                     continue;
                 }
 
@@ -34,7 +61,6 @@ public class ClickerThread extends Thread {
 
                 long delay = calculateDelay(cps, randomization);
 
-                // Выполняем клик и спим рассчитанную задержку
                 performClick();
                 Thread.sleep(delay);
 
@@ -45,16 +71,13 @@ public class ClickerThread extends Thread {
     }
 
     private void performClick() {
-        KeyBinding key;
-        if (this.button == 0) {
-            key = mc.gameSettings.keyBindAttack; // Атака (ЛКМ)
-        } else {
-            key = mc.gameSettings.keyBindUseItem; // Использовать предмет (ПКМ)
+        robot.mousePress(this.mouseButtonMask);
+        try {
+            Thread.sleep(10 + random.nextInt(15));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        
-        // Этот метод напрямую говорит игре "выполни действие этой кнопки один раз"
-        // Он не создает новых событий MouseEvent, разрывая порочный круг
-        KeyBinding.onTick(key.getKeyCode());
+        robot.mouseRelease(this.mouseButtonMask);
     }
 
     private long calculateDelay(double cps, double randomization) {

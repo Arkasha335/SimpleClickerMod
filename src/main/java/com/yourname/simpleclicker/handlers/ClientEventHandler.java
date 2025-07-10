@@ -1,6 +1,7 @@
 package com.yourname.simpleclicker.handlers;
 
 import com.yourname.simpleclicker.SimpleClickerMod;
+import com.yourname.simpleclicker.bridge.BridgeController;
 import com.yourname.simpleclicker.config.ModConfig;
 import com.yourname.simpleclicker.gui.SettingsGui;
 import net.minecraft.client.Minecraft;
@@ -10,13 +11,12 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.awt.Color;
-
 public class ClientEventHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
-    // Флаг для корректной обработки одиночного нажатия клавиши
+    private final BridgeController bridgeController = new BridgeController();
     private boolean wasToggleKeyPressed = false;
+    private boolean wasBridgerToggleKeyPressed = false;
 
     @SubscribeEvent
     public void onKeyInput(KeyInputEvent event) {
@@ -27,16 +27,21 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onMouseEvent(MouseEvent event) {
-        // Логика перехвата и отмены остается прежней, она работает идеально.
-        if (!ModConfig.modEnabled || mc.thePlayer == null || mc.currentScreen != null) {
+        if (mc.thePlayer == null || mc.currentScreen != null) return;
+
+        if (ModConfig.bridgerBotActive && event.button == 1) {
+            if(event.buttonstate) bridgeController.start();
+            else bridgeController.stop();
             return;
         }
+
+        if (!ModConfig.modEnabled) return;
         if (event.button == 0 && ModConfig.leftClickerEnabled) {
-            if (event.buttonstate) { event.setCanceled(true); ModConfig.leftClickerActive = true; } 
+            if (event.buttonstate) { event.setCanceled(true); ModConfig.leftClickerActive = true; }
             else { ModConfig.leftClickerActive = false; }
         }
         if (event.button == 1 && ModConfig.rightClickerEnabled) {
-            if (event.buttonstate) { event.setCanceled(true); ModConfig.rightClickerActive = true; } 
+            if (event.buttonstate) { event.setCanceled(true); ModConfig.rightClickerActive = true; }
             else { ModConfig.rightClickerActive = false; }
         }
     }
@@ -45,7 +50,6 @@ public class ClientEventHandler {
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
 
-        // Обработка глобального переключателя
         if (SimpleClickerMod.toggleModKey.isKeyDown()) {
             if (!wasToggleKeyPressed) {
                 ModConfig.modEnabled = !ModConfig.modEnabled;
@@ -54,38 +58,42 @@ public class ClientEventHandler {
         } else {
             wasToggleKeyPressed = false;
         }
+        
+        if (SimpleClickerMod.toggleBridgerKey.isKeyDown()) {
+            if (!wasBridgerToggleKeyPressed) {
+                ModConfig.bridgerBotActive = !ModConfig.bridgerBotActive;
+                wasBridgerToggleKeyPressed = true;
+            }
+        } else {
+            wasBridgerToggleKeyPressed = false;
+        }
 
-        // Предохранитель для GUI
+        if(mc.thePlayer != null) {
+            bridgeController.onTick();
+        }
+
         if (mc.currentScreen != null) {
             if (ModConfig.leftClickerActive) ModConfig.leftClickerActive = false;
             if (ModConfig.rightClickerActive) ModConfig.rightClickerActive = false;
+            if (ModConfig.bridgerBotActive) { bridgeController.stop(); ModConfig.bridgerBotActive = false; }
         }
     }
 
-    /**
-     * Новый обработчик для отрисовки HUD на экране.
-     */
     @SubscribeEvent
     public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
-        if (!ModConfig.hudEnabled || mc.gameSettings.showDebugInfo) {
-            return;
+        if (!ModConfig.hudEnabled || mc.gameSettings.showDebugInfo) return;
+        
+        int yOffset = 5;
+
+        String clickerText = ModConfig.modEnabled ? "§aClicker" : "§cClicker";
+        mc.fontRendererObj.drawStringWithShadow(clickerText, 5, yOffset, 0xFFFFFF);
+        yOffset += 10;
+        
+        if(ModConfig.bridgerEnabled && ModConfig.currentBridgeMode != com.yourname.simpleclicker.bridge.BridgeMode.DISABLED) {
+            String bridgerText = "Bridger: " + (ModConfig.bridgerBotActive ? "§aARMED" : "§eIDLE");
+            String modeText = "§7(Mode: " + ModConfig.currentBridgeMode.getDisplayName() + ")";
+            mc.fontRendererObj.drawStringWithShadow(bridgerText, 5, yOffset, 0xFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow(modeText, 5, yOffset + 10, 0xFFFFFF);
         }
-
-        String hudText;
-        int color;
-
-        if (ModConfig.modEnabled) {
-            String activeButtons = "";
-            if (ModConfig.leftClickerEnabled) activeButtons += "[LMB] ";
-            if (ModConfig.rightClickerEnabled) activeButtons += "[RMB]";
-            hudText = "§aClicker: §lON§r " + activeButtons.trim();
-            color = Color.GREEN.getRGB(); // Этот цвет сейчас не используется, но может пригодиться
-        } else {
-            hudText = "§cClicker: §lOFF";
-            color = Color.RED.getRGB();
-        }
-
-        // Рисуем текст в левом верхнем углу
-        mc.fontRendererObj.drawStringWithShadow(hudText, 5, 5, 0xFFFFFF);
     }
 }

@@ -1,5 +1,6 @@
 package com.yourname.simpleclicker;
 
+import com.yourname.simpleclicker.bridge.BridgeController;
 import com.yourname.simpleclicker.clicker.ClickerThread;
 import com.yourname.simpleclicker.handlers.ClientEventHandler;
 import net.minecraft.client.settings.KeyBinding;
@@ -16,7 +17,8 @@ import org.lwjgl.input.Mouse;
 public class SimpleClickerMod {
 
     public static KeyBinding openSettingsKey;
-    public static KeyBinding toggleModKey; // Наша новая клавиша
+    public static KeyBinding toggleModKey;
+    public static KeyBinding toggleBridgerKey;
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
@@ -24,19 +26,17 @@ public class SimpleClickerMod {
         FMLCommonHandler.instance().bus().register(handler);
         MinecraftForge.EVENT_BUS.register(handler);
 
-        // --- РЕГИСТРАЦИЯ КЛАВИШ ---
-        // Категория для наших биндов в меню управления
         String category = "key.categories.simpleclicker"; 
         
         openSettingsKey = new KeyBinding("key.open_settings", Keyboard.KEY_RSHIFT, category);
-        // Создаем бинд для переключателя. -98 это код средней кнопки мыши.
         toggleModKey = new KeyBinding("key.toggle_mod", -98, category); 
+        toggleBridgerKey = new KeyBinding("key.toggle_bridger", Keyboard.KEY_G, category);
 
         ClientRegistry.registerKeyBinding(openSettingsKey);
         ClientRegistry.registerKeyBinding(toggleModKey);
+        ClientRegistry.registerKeyBinding(toggleBridgerKey);
 
-        // --- ЗАПУСК ПОТОКОВ ---
-        new ClickerThread(0).start(); // ЛКМ
-        new ClickerThread(1).start(); // ПКМ
+        new ClickerThread(0).start();
+        new ClickerThread(1).start();
     }
 }
