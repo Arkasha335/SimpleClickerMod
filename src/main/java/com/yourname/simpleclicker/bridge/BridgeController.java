@@ -3,11 +3,13 @@ package com.yourname.simpleclicker.bridge;
 import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.util.*;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.MathHelper;
 
 public class BridgeController {
 
-    public enum State { IDLE, ARMED, BRIDGING, STABILIZING }
+    // --- УПРОЩЕНО: Убрали лишние состояния ---
+    public enum State { IDLE, ARMED, BRIDGING }
 
     private static final Minecraft mc = Minecraft.getMinecraft();
     private State currentState = State.IDLE;
@@ -15,7 +17,6 @@ public class BridgeController {
     private int actionTimer = 0;
 
     public State getCurrentState() { return currentState; }
-    public boolean isReady() { return isPlayerReady(); }
 
     public void onTick() {
         if (!ModConfig.bridgerEnabled || ModConfig.currentBridgeMode == BridgeMode.DISABLED || mc.currentScreen != null) {
@@ -25,14 +26,12 @@ public class BridgeController {
 
         switch (currentState) {
             case ARMED:
-                if (isPlayerReady()) {
-                    ModConfig.isCameraLocked = true;
-                    setPlayerRotation();
-                } else {
-                    disarm();
-                }
+                // --- НОВАЯ ЛОГИКА: Просто целится и блокирует камеру. Никаких проверок. ---
+                ModConfig.isCameraLocked = true;
+                setPlayerRotation();
                 break;
             case BRIDGING:
+                // Если отпустили кнопку, прекращаем строить
                 if (!mc.gameSettings.keyBindUseItem.isKeyDown()) {
                     stopBridging();
                     return;
@@ -40,32 +39,15 @@ public class BridgeController {
                 executeBridgingLogic();
                 actionTimer++;
                 break;
-            case STABILIZING:
-                handleStabilizationState();
-                break;
-        }
-    }
-
-    private void handleStabilizationState() {
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindSneak.getKeyCode(), true);
-        KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), true);
-        if (actionTimer < 10 && actionTimer % 3 == 0) {
-             KeyBinding.onTick(mc.gameSettings.keyBindRight.getKeyCode());
-        }
-        
-        actionTimer++;
-        if (actionTimer > 20) {
-            blocksPlaced = 0;
-            currentState = State.BRIDGING;
         }
     }
     
+    // --- УПРОЩЕНО: Просто переходит в режим ARMED ---
     public void arm() {
-        if (isPlayerReady()) {
-            currentState = State.ARMED;
-        }
+        currentState = State.ARMED;
     }
 
+    // --- УПРОЩЕНО: Просто отключает все ---
     public void disarm() {
         if (currentState != State.IDLE) {
             releaseAllKeys();
@@ -83,31 +65,14 @@ public class BridgeController {
     }
 
     public void stopBridging() {
-        if (currentState == State.BRIDGING || currentState == State.STABILIZING) {
-            releaseAllKeys();
-            if (isPlayerReady()) {
-                currentState = State.ARMED;
-            } else {
-                disarm();
-            }
+        if (currentState == State.BRIDGING) {
+           disarm(); // Просто полностью отключаемся после строительства
         }
     }
+    
+    // --- УДАЛЕНО: Метод isPlayerReady() больше не нужен, мы ему не доверяем ---
 
-    private boolean isPlayerReady() {
-        if (mc.thePlayer == null || !mc.thePlayer.onGround) return false;
-
-        Vec3 lookVec = mc.thePlayer.getLookVec();
-        Vec3 checkVec = lookVec.addVector(0, -0.2, 0).normalize();
-        
-        Vec3 playerPos = mc.thePlayer.getPositionEyes(1.0f);
-        // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-        Vec3 targetPos = playerPos.addVector(checkVec.xCoord * 1.5, checkVec.yCoord * 1.5, checkVec.zCoord * 1.5);
-        
-        MovingObjectPosition hit = mc.theWorld.rayTraceBlocks(playerPos, targetPos, false, false, true);
-        
-        return mc.thePlayer.onGround && hit == null;
-    }
-
+    // ... (executeBridgingLogic и setPlayerRotation остаются без изменений) ...
     private void executeBridgingLogic() {
         KeyBinding sneak = mc.gameSettings.keyBindSneak;
         KeyBinding back = mc.gameSettings.keyBindBack;
@@ -130,11 +95,12 @@ public class BridgeController {
                 KeyBinding.setKeyBindState(sneak.getKeyCode(), shouldBeSneaking);
                 break;
             case MOONWALK:
+                // Для мунволка убрана стабилизация для простоты и надежности
                 KeyBinding.setKeyBindState(back.getKeyCode(), true);
                 KeyBinding.setKeyBindState(right.getKeyCode(), (actionTimer % 8) < 2);
                 if (blocksPlaced > 0 && blocksPlaced % 8 == 0) {
-                    actionTimer = 0;
-                    currentState = State.STABILIZING;
+                    // Просто короткая пауза на шифте
+                    KeyBinding.onTick(sneak.getKeyCode());
                 }
                 break;
             case BREEZILY:

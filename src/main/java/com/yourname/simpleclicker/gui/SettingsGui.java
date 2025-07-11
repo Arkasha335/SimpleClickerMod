@@ -27,7 +27,7 @@ public class SettingsGui extends GuiScreen {
     @Override
     public void initGui() {
         this.buttonList.clear();
-        this.activeSlider = null; // Сбрасываем активный слайдер при открытии
+        this.activeSlider = null;
 
         panelWidth = 340;
         panelHeight = 220;
@@ -50,14 +50,14 @@ public class SettingsGui extends GuiScreen {
         buttonY += 45;
         // Кнопки и слайдеры модуля Clicker
         this.buttonList.add(new GuiColorButton(1, columnLeft, buttonY, elementWidth, 20, "Left Clicker", ModConfig.leftClickerEnabled));
-        this.buttonList.add(new GuiSlider(3, columnLeft, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.leftCps));
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Максимальный CPS теперь 100 ---
+        this.buttonList.add(new GuiSlider(3, columnLeft, buttonY + 25, elementWidth, "CPS", 1.0f, 100.0f, (float) ModConfig.leftCps));
         this.buttonList.add(new GuiSlider(4, columnLeft, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.leftRandomization));
         this.buttonList.add(new GuiColorButton(2, columnRight, buttonY, elementWidth, 20, "Right Clicker", ModConfig.rightClickerEnabled));
-        this.buttonList.add(new GuiSlider(5, columnRight, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.rightCps));
+        // --- И ИЗМЕНЕНИЕ ЗДЕСЬ: Максимальный CPS теперь 100 ---
+        this.buttonList.add(new GuiSlider(5, columnRight, buttonY + 25, elementWidth, "CPS", 1.0f, 100.0f, (float) ModConfig.rightCps));
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
     }
-
-
     // --- РАДИКАЛЬНОЕ ИЗМЕНЕНИЕ: Полностью новая логика обработки мыши ---
 
     @Override
