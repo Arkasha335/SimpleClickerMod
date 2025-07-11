@@ -1,9 +1,9 @@
- buildscript {
+buildscript {
     repositories {
         mavenCentral()
         maven {
             name = "forge"
-            url = "https://files.minecraftforge.net/maven"
+            url = "http://files.minecraftforge.net/maven"
         }
     }
     dependencies {
@@ -12,9 +12,9 @@
 }
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.0"
-group= "com.yourname.simpleclicker" // Замените на ваш пакет
-archivesBaseName = "SimpleClickerMod"
+version = "2.0" // Обновим версию
+group= "com.yourname.simpleclicker"
+archivesBaseName = "SimpleClickerMod-v2"
 
 sourceCompatibility = targetCompatibility = '1.8'
 compileJava {
@@ -28,7 +28,6 @@ minecraft {
 }
 
 dependencies {
-    // Вы можете добавить другие зависимости здесь
 }
 
 processResources {

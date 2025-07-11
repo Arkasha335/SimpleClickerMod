@@ -1,6 +1,6 @@
 package com.yourname.simpleclicker.config;
 
-import com.yourname.simpleclicker.bridge.BridgeMode; // <-- Новый импорт
+import com.yourname.simpleclicker.bridge.BridgeMode;
 
 public class ModConfig {
 
@@ -18,12 +18,10 @@ public class ModConfig {
     public static double rightRandomization = 0.25;
 
     // --- Модуль Auto-Bridger ---
-    public static BridgeMode currentBridgeMode = BridgeMode.DISABLED; // Текущий режим
-    public static boolean bridgerEnabled = true; // Главный переключатель модуля
+    public static boolean bridgerEnabled = true;
+    public static BridgeMode currentBridgeMode = BridgeMode.DISABLED;
 
-    // --- Управляющие флаги для потоков и ботов ---
-    public static volatile boolean leftClickerActive = false;
-    public static volatile boolean rightClickerActive = false;
-    public static volatile boolean bridgerBotActive = false; // Флаг для активации логики бота
-    public static volatile boolean canPlaceBlocks = true; // Флаг для блокировки кликов во время стабилизации
+    // --- Системные флаги (НЕ МЕНЯТЬ ВРУЧНУЮ) ---
+    // Эти флаги управляются кодом и не должны быть в GUI
+    public static volatile boolean isCameraLocked = false;
 }

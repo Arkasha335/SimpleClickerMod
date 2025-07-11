@@ -1,7 +1,5 @@
 package com.yourname.simpleclicker;
 
-import com.yourname.simpleclicker.bridge.BridgeController;
-import com.yourname.simpleclicker.clicker.ClickerThread;
 import com.yourname.simpleclicker.handlers.ClientEventHandler;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.common.MinecraftForge;
@@ -11,32 +9,32 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 
-@Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION)
+@Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION, clientSideOnly = true)
 public class SimpleClickerMod {
 
-    public static KeyBinding openSettingsKey;
-    public static KeyBinding toggleModKey;
-    public static KeyBinding toggleBridgerKey;
+    public static KeyBinding keyOpenSettings;
+    public static KeyBinding keyToggleMod;
+    public static KeyBinding keyToggleBridger;
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
         ClientEventHandler handler = new ClientEventHandler();
-        FMLCommonHandler.instance().bus().register(handler);
+        // Регистрируем наш единый обработчик во всех необходимых шинах событий
         MinecraftForge.EVENT_BUS.register(handler);
+        FMLCommonHandler.instance().bus().register(handler);
 
-        String category = "key.categories.simpleclicker"; 
-        
-        openSettingsKey = new KeyBinding("key.open_settings", Keyboard.KEY_RSHIFT, category);
-        toggleModKey = new KeyBinding("key.toggle_mod", -98, category); 
-        toggleBridgerKey = new KeyBinding("key.toggle_bridger", Keyboard.KEY_G, category);
+        // Категория для наших биндов в меню настроек
+        String category = "key.categories.simpleclicker";
 
-        ClientRegistry.registerKeyBinding(openSettingsKey);
-        ClientRegistry.registerKeyBinding(toggleModKey);
-        ClientRegistry.registerKeyBinding(toggleBridgerKey);
+        // Инициализация клавиш
+        keyOpenSettings = new KeyBinding("key.open_settings", Keyboard.KEY_RSHIFT, category);
+        keyToggleMod = new KeyBinding("key.toggle_mod", Keyboard.KEY_LCONTROL, category); // Поставил на левый Ctrl, можно изменить
+        keyToggleBridger = new KeyBinding("key.toggle_bridger", Keyboard.KEY_G, category);
 
-        new ClickerThread(0).start();
-        new ClickerThread(1).start();
+        // Регистрация клавиш в игре
+        ClientRegistry.registerKeyBinding(keyOpenSettings);
+        ClientRegistry.registerKeyBinding(keyToggleMod);
+        ClientRegistry.registerKeyBinding(keyToggleBridger);
     }
 }

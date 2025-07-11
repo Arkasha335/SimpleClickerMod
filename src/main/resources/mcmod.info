@@ -2,13 +2,13 @@
 {
   "modid": "simpleclicker",
   "name": "Simple Clicker Mod",
-  "description": "A simple, customizable autoclicker mod.",
+  "description": "Advanced Clicker & Bridger Utility",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",
   "updateUrl": "",
   "authorList": ["YourName"],
-  "credits": "",
+  "credits": "Developed with AI assistance",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []
