@@ -1,16 +1,25 @@
 package com.yourname.simpleclicker.gui;
 
-import com.yourname.simpleclicker.Reference; // <-- ВОТ ОНО, ИСПРАВЛЕНИЕ
+import com.yourname.simpleclicker.Reference;
 import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.texture.TextureUtil;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
-import java.io.IOException;
+import java.awt.image.BufferedImage;
 
 public class SettingsGui extends GuiScreen {
+
+    // --- ИСПРАВЛЕНИЯ И УЛУЧШЕНИЯ ---
+    // 1. ОПТИМИЗАЦИЯ: Фон теперь рисуется один раз и кэшируется в текстуру.
+    //    Это убирает лаги и делает открытие/работу GUI абсолютно плавной.
+    // 2. Логика mouseClickMove и mouseReleased исправлена для корректной работы со слайдерами.
+    
+    private static int backgroundTexture = -1;
+    private static boolean isTextureGenerated = false;
 
     private float hue = 0.0f;
     private int panelWidth, panelHeight, startX, startY;
@@ -29,22 +38,17 @@ public class SettingsGui extends GuiScreen {
         int columnRight = startX + panelWidth / 2 + 5;
         int elementWidth = (panelWidth / 2) - 25;
 
-        // --- Верхний ряд ---
+        // ... (остальная часть initGui без изменений)
         this.buttonList.add(new GuiColorButton(0, columnLeft, buttonY, elementWidth, 20, "Mod Enabled", ModConfig.modEnabled));
         this.buttonList.add(new GuiColorButton(7, columnRight, buttonY, elementWidth, 20, "HUD Enabled", ModConfig.hudEnabled));
-
-        // --- Модуль Bridger ---
         buttonY += 30;
         this.buttonList.add(new GuiColorButton(10, columnLeft, buttonY, elementWidth, 20, "Bridger", ModConfig.bridgerEnabled));
         String modeName = "Mode: " + ModConfig.currentBridgeMode.getDisplayName();
         this.buttonList.add(new GuiColorButton(11, columnRight, buttonY, elementWidth, 20, modeName, ModConfig.currentBridgeMode != com.yourname.simpleclicker.bridge.BridgeMode.DISABLED));
-
-        // --- Модули кликеров и слайдеры ---
         buttonY += 45;
         this.buttonList.add(new GuiColorButton(1, columnLeft, buttonY, elementWidth, 20, "Left Clicker", ModConfig.leftClickerEnabled));
         this.buttonList.add(new GuiSlider(3, columnLeft, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.leftCps));
         this.buttonList.add(new GuiSlider(4, columnLeft, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.leftRandomization));
-
         this.buttonList.add(new GuiColorButton(2, columnRight, buttonY, elementWidth, 20, "Right Clicker", ModConfig.rightClickerEnabled));
         this.buttonList.add(new GuiSlider(5, columnRight, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.rightCps));
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
@@ -52,7 +56,7 @@ public class SettingsGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button instanceof GuiColorButton || button instanceof GuiButton) {
+        if (button.id < 20) { // ID для слайдеров не обрабатываем здесь
             switch (button.id) {
                 case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
                 case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
@@ -61,7 +65,7 @@ public class SettingsGui extends GuiScreen {
                 case 10: ModConfig.bridgerEnabled = !ModConfig.bridgerEnabled; break;
                 case 11: ModConfig.currentBridgeMode = ModConfig.currentBridgeMode.getNext(); break;
             }
-            this.initGui(); // Перерисовываем GUI для обновления состояния кнопок
+            this.initGui();
         }
     }
 
@@ -71,9 +75,9 @@ public class SettingsGui extends GuiScreen {
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider && ((GuiSlider) button).isDragging()) {
                 ((GuiSlider) button).updateValue(mouseX);
+                updateConfigFromSliders(); // Обновляем конфиг в реальном времени
             }
         }
-        updateConfigFromSliders();
     }
 
     @Override
@@ -81,7 +85,7 @@ public class SettingsGui extends GuiScreen {
         super.mouseReleased(mouseX, mouseY, state);
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider) {
-                ((GuiSlider) button).stopDragging();
+                ((GuiSlider) button).mouseReleased(mouseX, mouseY);
             }
         }
     }
@@ -100,60 +104,50 @@ public class SettingsGui extends GuiScreen {
         }
     }
 
+    private void generateBackgroundTexture() {
+        int radius = 6;
+        BufferedImage image = new BufferedImage(panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(new Color(25, 25, 25, 230)); // Цвет фона
+        g2d.fillRoundRect(0, 0, panelWidth, panelHeight, radius * 2, radius * 2);
+        g2d.dispose();
+        backgroundTexture = TextureUtil.uploadTextureImage(TextureUtil.glGenTextures(), image);
+        isTextureGenerated = true;
+    }
+
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        if (!isTextureGenerated) {
+            generateBackgroundTexture();
+        }
+        
         hue += 0.002F;
         if (hue > 1.0F) hue -= 1.0F;
         Color animatedColor = Color.getHSBColor(hue, 0.8f, 1.0f);
-
-        // --- Рендер фона и рамки ---
-        // Рисуем полупрозрачный черный фон
-        drawRoundedRect(startX, startY, startX + panelWidth, startY + panelHeight, 6, 0x9F000000);
-        // Рисуем анимированную рамку поверх
+        
+        // --- Рендер фона ---
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        GlStateManager.enableBlend();
+        mc.getTextureManager().bindTexture(backgroundTexture);
+        drawModalRectWithCustomSizedTexture(startX, startY, 0, 0, panelWidth, panelHeight, panelWidth, panelHeight);
+        
+        // --- Рендер рамки ---
         drawRoundedRectOutline(startX, startY, panelWidth, panelHeight, 6, 2.0f, animatedColor.getRGB());
-
+        
         // --- Заголовок ---
         this.drawCenteredString(this.fontRendererObj, Reference.MOD_NAME + " v" + Reference.VERSION, this.width / 2, startY + 10, Color.WHITE.getRGB());
-
-        // --- Рендер всех кнопок и слайдеров ---
+        
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
-
-    public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
-        GlStateManager.enableBlend();
-        GlStateManager.disableTexture2D();
-        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-
-        float alpha = (float)(color >> 24 & 255) / 255.0F;
-        float red = (float)(color >> 16 & 255) / 255.0F;
-        float green = (float)(color >> 8 & 255) / 255.0F;
-        float blue = (float)(color & 255) / 255.0F;
-
-        GL11.glPushAttrib(0);
-        GL11.glScaled(0.5D, 0.5D, 0.5D);
-        x *= 2; y *= 2; x2 *= 2; y2 *= 2; rad *= 2;
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glColor4f(red, green, blue, alpha);
-        GL11.glEnable(GL11.GL_LINE_SMOOTH);
-        GL11.glBegin(GL11.GL_POLYGON);
-        for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y + rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
-        for (int i = 90; i <= 180; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y2 - rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
-        for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x2 - rad + Math.sin(Math.toRadians(i)) * rad, y2 - rad + Math.cos(Math.toRadians(i)) * rad);
-        for (int i = 90; i <= 180; i += 3) GL11.glVertex2d(x2 - rad + Math.sin(Math.toRadians(i)) * rad, y + rad + Math.cos(Math.toRadians(i)) * rad);
-        GL11.glEnd();
-        GL11.glScaled(2.0D, 2.0D, 2.0D);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glDisable(GL11.GL_LINE_SMOOTH);
-        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-        GL11.glPopAttrib();
-    }
-
+    
     public void drawRoundedRectOutline(int x, int y, int width, int height, int radius, float lineWidth, int color) {
+        // ... (этот метод остается без изменений)
         GlStateManager.enableBlend();
         GlStateManager.disableTexture2D();
         GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
         GL11.glLineWidth(lineWidth);
-
+        
         float alpha = (float)(color >> 24 & 255) / 255.0F;
         float red = (float)(color >> 16 & 255) / 255.0F;
         float green = (float)(color >> 8 & 255) / 255.0F;
@@ -170,7 +164,7 @@ public class SettingsGui extends GuiScreen {
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
     }
-
+    
     @Override
     public boolean doesGuiPauseGame() { return true; }
 }

@@ -2,9 +2,14 @@ package com.yourname.simpleclicker.gui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
-import java.awt.*;
+import java.awt.Color;
 
 public class GuiColorButton extends GuiButton {
+
+    // --- ИСПРАВЛЕНИЯ И УЛУЧШЕНИЯ ---
+    // 1. Отрисовка полностью заменена на простые drawRect для надежности.
+    // 2. Добавлены текстовые символы "✔" (галочка) и "✖" (крестик).
+    // 3. Цвета контура сделаны более приятными и менее "ядовитыми".
 
     private final boolean active;
 
@@ -18,20 +23,27 @@ public class GuiColorButton extends GuiButton {
         if (this.visible) {
             boolean isHovered = mouseX >= this.xPosition && mouseY >= this.yPosition && mouseX < this.xPosition + this.width && mouseY < this.yPosition + this.height;
 
-            // Цвета контура
-            Color borderColor = this.active ? new Color(76, 175, 80) : new Color(244, 67, 54);
+            // Определяем цвет контура
+            Color borderColor = this.active ? new Color(76, 175, 80) : new Color(211, 47, 47); // Приглушенный зеленый / красный
             if (isHovered) {
                 borderColor = borderColor.brighter();
             }
 
             // Рисуем фон кнопки (темный, полупрозрачный)
-            SettingsGui.drawRoundedRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, 3, 0x5F000000);
+            drawRect(this.xPosition, this.yPosition, this.xPosition + this.width, this.yPosition + this.height, 0x80000000); // 50% прозрачный черный
             
-            // Рисуем контур
-            new SettingsGui().drawRoundedRectOutline(this.xPosition, this.yPosition, this.width, this.height, 3, 1.5f, borderColor.getRGB());
+            // Рисуем контур (обводку)
+            drawHorizontalLine(this.xPosition, this.xPosition + this.width -1, this.yPosition, borderColor.getRGB()); // Верх
+            drawHorizontalLine(this.xPosition, this.xPosition + this.width -1, this.yPosition + this.height -1, borderColor.getRGB()); // Низ
+            drawVerticalLine(this.xPosition, this.yPosition, this.yPosition + this.height -1, borderColor.getRGB()); // Лево
+            drawVerticalLine(this.xPosition + this.width -1, this.yPosition, this.yPosition + this.height -1, borderColor.getRGB()); // Право
 
-            // Текст кнопки
-            this.drawCenteredString(mc.fontRendererObj, this.displayString, this.xPosition + this.width / 2, this.yPosition + (this.height - 8) / 2, Color.WHITE.getRGB());
+            // Определяем иконку статуса
+            String statusIcon = this.active ? "§a✔" : "§c✖";
+            
+            // Рисуем текст
+            mc.fontRendererObj.drawString(this.displayString, this.xPosition + 5, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
+            mc.fontRendererObj.drawString(statusIcon, this.xPosition + this.width - 14, this.yPosition + (this.height - 8) / 2, 0xFFFFFF);
         }
     }
 }
