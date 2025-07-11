@@ -1,11 +1,10 @@
 package com.yourname.simpleclicker.gui;
 
-import com.yourname.simpleclicker.SimpleClickerMod;
+import com.yourname.simpleclicker.Reference; // <-- ВОТ ОНО, ИСПРАВЛЕНИЕ
 import com.yourname.simpleclicker.config.ModConfig;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
@@ -112,25 +111,24 @@ public class SettingsGui extends GuiScreen {
         drawRoundedRect(startX, startY, startX + panelWidth, startY + panelHeight, 6, 0x9F000000);
         // Рисуем анимированную рамку поверх
         drawRoundedRectOutline(startX, startY, panelWidth, panelHeight, 6, 2.0f, animatedColor.getRGB());
-        
+
         // --- Заголовок ---
         this.drawCenteredString(this.fontRendererObj, Reference.MOD_NAME + " v" + Reference.VERSION, this.width / 2, startY + 10, Color.WHITE.getRGB());
-        
+
         // --- Рендер всех кнопок и слайдеров ---
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
-    
-    // Утилиты для рисования (взяты из вашего кода и доработаны)
+
     public static void drawRoundedRect(int x, int y, int x2, int y2, int rad, int color) {
         GlStateManager.enableBlend();
         GlStateManager.disableTexture2D();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-        
+
         float alpha = (float)(color >> 24 & 255) / 255.0F;
         float red = (float)(color >> 16 & 255) / 255.0F;
         float green = (float)(color >> 8 & 255) / 255.0F;
         float blue = (float)(color & 255) / 255.0F;
-        
+
         GL11.glPushAttrib(0);
         GL11.glScaled(0.5D, 0.5D, 0.5D);
         x *= 2; y *= 2; x2 *= 2; y2 *= 2; rad *= 2;
@@ -138,7 +136,6 @@ public class SettingsGui extends GuiScreen {
         GL11.glColor4f(red, green, blue, alpha);
         GL11.glEnable(GL11.GL_LINE_SMOOTH);
         GL11.glBegin(GL11.GL_POLYGON);
-        // ... (геометрия осталась та же)
         for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y + rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
         for (int i = 90; i <= 180; i += 3) GL11.glVertex2d(x + rad + Math.sin(Math.toRadians(i)) * rad * -1.0D, y2 - rad + Math.cos(Math.toRadians(i)) * rad * -1.0D);
         for (int i = 0; i <= 90; i += 3) GL11.glVertex2d(x2 - rad + Math.sin(Math.toRadians(i)) * rad, y2 - rad + Math.cos(Math.toRadians(i)) * rad);
@@ -150,13 +147,13 @@ public class SettingsGui extends GuiScreen {
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopAttrib();
     }
-    
+
     public void drawRoundedRectOutline(int x, int y, int width, int height, int radius, float lineWidth, int color) {
         GlStateManager.enableBlend();
         GlStateManager.disableTexture2D();
         GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
         GL11.glLineWidth(lineWidth);
-        
+
         float alpha = (float)(color >> 24 & 255) / 255.0F;
         float red = (float)(color >> 16 & 255) / 255.0F;
         float green = (float)(color >> 8 & 255) / 255.0F;
@@ -164,7 +161,6 @@ public class SettingsGui extends GuiScreen {
 
         GL11.glColor4f(red, green, blue, alpha);
         GL11.glBegin(GL11.GL_LINE_LOOP);
-        // ... (аналогичная геометрия, но для контура)
         for (int i = 0; i <= 90; i++) GL11.glVertex2d(x + radius + Math.sin(i * Math.PI / 180.0D) * -radius, y + radius + Math.cos(i * Math.PI / 180.0D) * -radius);
         for (int i = 90; i <= 180; i++) GL11.glVertex2d(x + radius + Math.sin(i * Math.PI / 180.0D) * -radius, y + height - radius + Math.cos(i * Math.PI / 180.0D) * -radius);
         for (int i = 0; i <= 90; i++) GL11.glVertex2d(x + width - radius + Math.sin(i * Math.PI / 180.0D) * radius, y + height - radius + Math.cos(i * Math.PI / 180.0D) * radius);
