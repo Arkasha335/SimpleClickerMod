@@ -15,7 +15,7 @@ public class BridgeController {
     private int actionTimer = 0;
 
     public State getCurrentState() { return currentState; }
-    public boolean isReady() { return isPlayerReady(); } // Новый метод для HUD
+    public boolean isReady() { return isPlayerReady(); }
 
     public void onTick() {
         if (!ModConfig.bridgerEnabled || ModConfig.currentBridgeMode == BridgeMode.DISABLED || mc.currentScreen != null) {
@@ -25,11 +25,11 @@ public class BridgeController {
 
         switch (currentState) {
             case ARMED:
-                if (isPlayerReady()) { // Используем новый, надежный метод
+                if (isPlayerReady()) {
                     ModConfig.isCameraLocked = true;
                     setPlayerRotation();
                 } else {
-                    disarm(); // Если игрок сошел с края, отключаемся
+                    disarm();
                 }
                 break;
             case BRIDGING:
@@ -61,7 +61,7 @@ public class BridgeController {
     }
     
     public void arm() {
-        if (isPlayerReady()) { // Проверяем готовность перед активацией
+        if (isPlayerReady()) {
             currentState = State.ARMED;
         }
     }
@@ -93,28 +93,21 @@ public class BridgeController {
         }
     }
 
-    // --- РАДИКАЛЬНОЕ ИЗМЕНЕНИЕ: Замена isPlayerAtEdge на isPlayerReady ---
     private boolean isPlayerReady() {
         if (mc.thePlayer == null || !mc.thePlayer.onGround) return false;
 
-        // Вектор взгляда игрока
         Vec3 lookVec = mc.thePlayer.getLookVec();
-        // Вектор для проверки пространства перед игроком (вперед и немного вниз)
         Vec3 checkVec = lookVec.addVector(0, -0.2, 0).normalize();
         
-        // Позиция глаз игрока
         Vec3 playerPos = mc.thePlayer.getPositionEyes(1.0f);
-        // Конечная точка для трассировки луча (на 1.5 блока вперед)
-        Vec3 targetPos = playerPos.add(checkVec.xCoord * 1.5, checkVec.yCoord * 1.5, checkVec.zCoord * 1.5);
+        // --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+        Vec3 targetPos = playerPos.addVector(checkVec.xCoord * 1.5, checkVec.yCoord * 1.5, checkVec.zCoord * 1.5);
         
-        // Проверяем, есть ли блок впереди. Если есть (hit != null), то строить некуда. Нам нужен null.
         MovingObjectPosition hit = mc.theWorld.rayTraceBlocks(playerPos, targetPos, false, false, true);
         
-        // Условие: игрок на земле И перед ним пустое пространство.
         return mc.thePlayer.onGround && hit == null;
     }
 
-    // ... (остальной код BridgeController остается без изменений) ...
     private void executeBridgingLogic() {
         KeyBinding sneak = mc.gameSettings.keyBindSneak;
         KeyBinding back = mc.gameSettings.keyBindBack;
