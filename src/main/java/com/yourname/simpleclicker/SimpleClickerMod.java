@@ -1,5 +1,6 @@
 package com.yourname.simpleclicker;
 
+import com.yourname.simpleclicker.clicker.ClickerThread;
 import com.yourname.simpleclicker.handlers.ClientEventHandler;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.common.MinecraftForge;
@@ -20,21 +21,21 @@ public class SimpleClickerMod {
     @EventHandler
     public void init(FMLInitializationEvent event) {
         ClientEventHandler handler = new ClientEventHandler();
-        // Регистрируем наш единый обработчик во всех необходимых шинах событий
         MinecraftForge.EVENT_BUS.register(handler);
         FMLCommonHandler.instance().bus().register(handler);
 
-        // Категория для наших биндов в меню настроек
         String category = "key.categories.simpleclicker";
 
-        // Инициализация клавиш
         keyOpenSettings = new KeyBinding("key.open_settings", Keyboard.KEY_RSHIFT, category);
-        keyToggleMod = new KeyBinding("key.toggle_mod", Keyboard.KEY_LCONTROL, category); // Поставил на левый Ctrl, можно изменить
+        keyToggleMod = new KeyBinding("key.toggle_mod", Keyboard.KEY_LCONTROL, category);
         keyToggleBridger = new KeyBinding("key.toggle_bridger", Keyboard.KEY_G, category);
 
-        // Регистрация клавиш в игре
         ClientRegistry.registerKeyBinding(keyOpenSettings);
         ClientRegistry.registerKeyBinding(keyToggleMod);
         ClientRegistry.registerKeyBinding(keyToggleBridger);
+
+        // --- ЗАПУСКАЕМ ПОТОКИ КЛИКЕРА ---
+        new ClickerThread(0).start(); // Поток для ЛКМ
+        new ClickerThread(1).start(); // Поток для ПКМ
     }
 }

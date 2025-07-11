@@ -21,7 +21,8 @@ public class ModConfig {
     public static boolean bridgerEnabled = true;
     public static BridgeMode currentBridgeMode = BridgeMode.DISABLED;
 
-    // --- Системные флаги (НЕ МЕНЯТЬ ВРУЧНУЮ) ---
-    // Эти флаги управляются кодом и не должны быть в GUI
+    // --- СИСТЕМНЫЕ ФЛАГИ ДЛЯ УПРАВЛЕНИЯ ЛОГИКОЙ ---
+    public static volatile boolean leftClickerActive = false;
+    public static volatile boolean rightClickerActive = false;
     public static volatile boolean isCameraLocked = false;
 }
