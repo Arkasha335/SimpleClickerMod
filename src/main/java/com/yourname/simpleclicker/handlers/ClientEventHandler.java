@@ -1,11 +1,13 @@
 package com.yourname.simpleclicker.handlers;
 
 import com.yourname.simpleclicker.SimpleClickerMod;
-import com.yourname.simpleclicker.bridge.BridgeController;
 import com.yourname.simpleclicker.bridge.BridgeMode;
 import com.yourname.simpleclicker.config.ModConfig;
 import com.yourname.simpleclicker.gui.SettingsGui;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.MathHelper;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -15,7 +17,6 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 public class ClientEventHandler {
 
     private final Minecraft mc = Minecraft.getMinecraft();
-    private final BridgeController bridgeController = new BridgeController();
     private boolean wasToggleModKeyPressed = false;
     private boolean wasToggleBridgerKeyPressed = false;
 
@@ -31,24 +32,15 @@ public class ClientEventHandler {
         if (ModConfig.isCameraLocked) {
             event.setCanceled(true);
         }
-
         if (mc.currentScreen != null) return;
         
         // Управление флагами для ClickerThread
-        if (ModConfig.modEnabled && bridgeController.getCurrentState() == BridgeController.State.IDLE) {
+        if (ModConfig.modEnabled && !ModConfig.bridgerBotActive) {
             if (event.button == 0 && ModConfig.leftClickerEnabled) {
                 ModConfig.leftClickerActive = event.buttonstate;
             }
             if (event.button == 1 && ModConfig.rightClickerEnabled) {
                 ModConfig.rightClickerActive = event.buttonstate;
-            }
-        }
-        
-        // Управление Bridger
-        if (ModConfig.bridgerEnabled && event.button == 1) {
-             if (bridgeController.getCurrentState() == BridgeController.State.ARMED && event.buttonstate) {
-                bridgeController.startBridging();
-                event.setCanceled(true);
             }
         }
     }
@@ -57,18 +49,38 @@ public class ClientEventHandler {
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START || mc.thePlayer == null) return;
         handleKeyToggles();
-        bridgeController.onTick();
         
-        // Если открыт GUI, сбрасываем все состояния
         if (mc.currentScreen != null) {
+            // Если открыт GUI, сбрасываем все
             ModConfig.leftClickerActive = false;
             ModConfig.rightClickerActive = false;
-            if (bridgeController.getCurrentState() != BridgeController.State.IDLE) {
-                bridgeController.disarm();
+            if (ModConfig.bridgerBotActive) {
+                disableBridger();
+            }
+            return;
+        }
+        
+        // --- НОВАЯ, ТУПАЯ И НАДЕЖНАЯ ЛОГИКА БРИДЖЕРА ---
+        if (ModConfig.bridgerBotActive) {
+            ModConfig.isCameraLocked = true;
+            setPlayerRotation(); // Целимся
+            
+            // Если зажата ПКМ, держим кнопки для строительства
+            if (mc.gameSettings.keyBindUseItem.isKeyDown()) {
+                executeBridgingLogic();
+            } else {
+                // Если не зажата, отпускаем все, кроме шифта (если нужно)
+                 releaseMovementKeys();
             }
         }
     }
-
+    
+    private void disableBridger() {
+        ModConfig.bridgerBotActive = false;
+        ModConfig.isCameraLocked = false;
+        releaseMovementKeys();
+    }
+    
     private void handleKeyToggles() {
         if (SimpleClickerMod.keyToggleMod.isKeyDown()) {
             if (!wasToggleModKeyPressed) {
@@ -79,14 +91,48 @@ public class ClientEventHandler {
 
         if (SimpleClickerMod.keyToggleBridger.isKeyDown()) {
             if (!wasToggleBridgerKeyPressed) {
-                if (bridgeController.getCurrentState() == BridgeController.State.IDLE) {
-                    bridgeController.arm();
+                if(ModConfig.bridgerBotActive) {
+                    disableBridger();
                 } else {
-                    bridgeController.disarm();
+                    ModConfig.bridgerBotActive = true;
                 }
                 wasToggleBridgerKeyPressed = true;
             }
         } else { wasToggleBridgerKeyPressed = false; }
+    }
+
+    // --- Логика бриджера, переехавшая сюда ---
+    private void executeBridgingLogic() {
+        KeyBinding.onTick(mc.gameSettings.keyBindUseItem.getKeyCode());
+        KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), true);
+        if(ModConfig.currentBridgeMode == BridgeMode.NINJA || ModConfig.currentBridgeMode == BridgeMode.GODBRIDGE){
+             KeyBinding.setKeyBindState(mc.gameSettings.keyBindRight.getKeyCode(), true);
+        }
+    }
+    
+    private void releaseMovementKeys() {
+        KeyBinding.setKeyBindState(mc.gameSettings.keyBindBack.getKeyCode(), false);
+        KeyBinding.setKeyBindState(mc.gameSettings.keyBindLeft.getKeyCode(), false);
+        KeyBinding.setKeyBindState(mc.gameSettings.keyBindRight.getKeyCode(), false);
+    }
+
+    private void setPlayerRotation() {
+        EnumFacing facing = mc.thePlayer.getHorizontalFacing();
+        float yaw = facing.getHorizontalIndex() * 90;
+        
+        if (ModConfig.currentBridgeMode == BridgeMode.GODBRIDGE || ModConfig.currentBridgeMode == BridgeMode.NINJA) {
+            if (facing == EnumFacing.NORTH) yaw -= 45;
+            if (facing == EnumFacing.SOUTH) yaw += 45;
+            if (facing == EnumFacing.WEST) yaw -= 45;
+            if (facing == EnumFacing.EAST) yaw += 45;
+        }
+        
+        float pitch = 82.5f;
+        if(ModConfig.currentBridgeMode == BridgeMode.NINJA) pitch = 79.0f;
+        if(ModConfig.currentBridgeMode == BridgeMode.MOONWALK) { pitch = 83.5f; yaw += 28; }
+
+        mc.thePlayer.rotationYaw = MathHelper.wrapAngleTo180_float(yaw);
+        mc.thePlayer.rotationPitch = pitch;
     }
 
     @SubscribeEvent
@@ -97,16 +143,8 @@ public class ClientEventHandler {
         yOffset += 10;
         
         if (ModConfig.bridgerEnabled && ModConfig.currentBridgeMode != BridgeMode.DISABLED) {
-            String bridgerStatusText;
-            switch(bridgeController.getCurrentState()) {
-                case ARMED: bridgerStatusText = "§eARMED"; break;
-                case BRIDGING: bridgerStatusText = "§cBRIDGING"; break;
-                default: bridgerStatusText = "§7IDLE"; break;
-            }
+            String bridgerStatusText = ModConfig.bridgerBotActive ? "§eARMED" : "§7IDLE";
             mc.fontRendererObj.drawStringWithShadow("Bridger: " + bridgerStatusText, 5, yOffset, 0xFFFFFF);
-            if(bridgeController.getCurrentState() != BridgeController.State.IDLE) {
-                 mc.fontRendererObj.drawStringWithShadow("§7Mode: " + ModConfig.currentBridgeMode.getDisplayName(), 5, yOffset + 10, 0xFFFFFF);
-            }
         }
     }
 }
