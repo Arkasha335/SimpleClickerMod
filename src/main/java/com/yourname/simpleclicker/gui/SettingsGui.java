@@ -13,11 +13,6 @@ import java.awt.image.BufferedImage;
 
 public class SettingsGui extends GuiScreen {
 
-    // --- ИСПРАВЛЕНИЯ И УЛУЧШЕНИЯ ---
-    // 1. ОПТИМИЗАЦИЯ: Фон теперь рисуется один раз и кэшируется в текстуру.
-    //    Это убирает лаги и делает открытие/работу GUI абсолютно плавной.
-    // 2. Логика mouseClickMove и mouseReleased исправлена для корректной работы со слайдерами.
-    
     private static int backgroundTexture = -1;
     private static boolean isTextureGenerated = false;
 
@@ -38,17 +33,22 @@ public class SettingsGui extends GuiScreen {
         int columnRight = startX + panelWidth / 2 + 5;
         int elementWidth = (panelWidth / 2) - 25;
 
-        // ... (остальная часть initGui без изменений)
+        // Кнопки глобальных настроек
         this.buttonList.add(new GuiColorButton(0, columnLeft, buttonY, elementWidth, 20, "Mod Enabled", ModConfig.modEnabled));
         this.buttonList.add(new GuiColorButton(7, columnRight, buttonY, elementWidth, 20, "HUD Enabled", ModConfig.hudEnabled));
         buttonY += 30;
+
+        // Кнопки модуля Bridger
         this.buttonList.add(new GuiColorButton(10, columnLeft, buttonY, elementWidth, 20, "Bridger", ModConfig.bridgerEnabled));
         String modeName = "Mode: " + ModConfig.currentBridgeMode.getDisplayName();
         this.buttonList.add(new GuiColorButton(11, columnRight, buttonY, elementWidth, 20, modeName, ModConfig.currentBridgeMode != com.yourname.simpleclicker.bridge.BridgeMode.DISABLED));
         buttonY += 45;
+
+        // Кнопки и слайдеры модуля Clicker
         this.buttonList.add(new GuiColorButton(1, columnLeft, buttonY, elementWidth, 20, "Left Clicker", ModConfig.leftClickerEnabled));
         this.buttonList.add(new GuiSlider(3, columnLeft, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.leftCps));
         this.buttonList.add(new GuiSlider(4, columnLeft, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.leftRandomization));
+
         this.buttonList.add(new GuiColorButton(2, columnRight, buttonY, elementWidth, 20, "Right Clicker", ModConfig.rightClickerEnabled));
         this.buttonList.add(new GuiSlider(5, columnRight, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.rightCps));
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
@@ -56,7 +56,7 @@ public class SettingsGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button.id < 20) { // ID для слайдеров не обрабатываем здесь
+        if (button.id < 20) {
             switch (button.id) {
                 case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
                 case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
@@ -75,7 +75,7 @@ public class SettingsGui extends GuiScreen {
         for (GuiButton button : this.buttonList) {
             if (button instanceof GuiSlider && ((GuiSlider) button).isDragging()) {
                 ((GuiSlider) button).updateValue(mouseX);
-                updateConfigFromSliders(); // Обновляем конфиг в реальном времени
+                updateConfigFromSliders();
             }
         }
     }
@@ -109,7 +109,7 @@ public class SettingsGui extends GuiScreen {
         BufferedImage image = new BufferedImage(panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = image.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setColor(new Color(25, 25, 25, 230)); // Цвет фона
+        g2d.setColor(new Color(25, 25, 25, 230));
         g2d.fillRoundRect(0, 0, panelWidth, panelHeight, radius * 2, radius * 2);
         g2d.dispose();
         backgroundTexture = TextureUtil.uploadTextureImage(TextureUtil.glGenTextures(), image);
@@ -129,7 +129,10 @@ public class SettingsGui extends GuiScreen {
         // --- Рендер фона ---
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         GlStateManager.enableBlend();
-        mc.getTextureManager().bindTexture(backgroundTexture);
+
+        // --- ИСПРАВЛЕНО ---
+        // Используем GlStateManager.bindTexture для работы с ID текстуры, а не ResourceLocation
+        GlStateManager.bindTexture(backgroundTexture);
         drawModalRectWithCustomSizedTexture(startX, startY, 0, 0, panelWidth, panelHeight, panelWidth, panelHeight);
         
         // --- Рендер рамки ---
@@ -142,7 +145,6 @@ public class SettingsGui extends GuiScreen {
     }
     
     public void drawRoundedRectOutline(int x, int y, int width, int height, int radius, float lineWidth, int color) {
-        // ... (этот метод остается без изменений)
         GlStateManager.enableBlend();
         GlStateManager.disableTexture2D();
         GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);

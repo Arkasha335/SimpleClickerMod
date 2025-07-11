@@ -17,38 +17,36 @@ import java.util.Random;
 
 public class ClientEventHandler {
 
-    // --- ИСПРАВЛЕНИЯ И УЛУЧШЕНИЯ ---
-    // 1. Добавлены флаги для надежного однократного срабатывания клавиш.
-    //    Это решает проблему "залипания" и гарантирует, что одно нажатие = одно действие.
-    // 2. Логика активации бриджера вынесена в onClientTick для стабильности.
-
     private final Minecraft mc = Minecraft.getMinecraft();
     private final BridgeController bridgeController = new BridgeController();
     private final Random random = new Random();
 
+    // Флаги для надежного однократного срабатывания клавиш
     private boolean wasToggleModKeyPressed = false;
     private boolean wasToggleBridgerKeyPressed = false;
 
+    // --- НОВОЕ: Переменные для правильного автокликера ---
     private long nextLeftClickTime = 0;
     private long nextRightClickTime = 0;
 
+    // --- НОВОЕ: Рефлексия для вызова нативных кликов ---
     private static Method clickMouseMethod;
     private static Method rightClickMouseMethod;
 
     static {
         try {
-            clickMouseMethod = Minecraft.class.getDeclaredMethod("func_147116_af");
-            rightClickMouseMethod = Minecraft.class.getDeclaredMethod("func_147121_ag");
+            clickMouseMethod = Minecraft.class.getDeclaredMethod("func_147116_af"); // clickMouse
+            rightClickMouseMethod = Minecraft.class.getDeclaredMethod("func_147121_ag"); // rightClickMouse
             clickMouseMethod.setAccessible(true);
             rightClickMouseMethod.setAccessible(true);
         } catch (Exception e) {
+            System.err.println("Could not initialize reflection for click methods. Clicker will not work.");
             e.printStackTrace();
         }
     }
 
     @SubscribeEvent
     public void onKeyInput(KeyInputEvent event) {
-        // Эта функция теперь отвечает только за открытие GUI
         if (SimpleClickerMod.keyOpenSettings.isPressed()) {
             mc.displayGuiScreen(new SettingsGui());
         }
@@ -56,17 +54,18 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public void onMouseEvent(MouseEvent event) {
-        // Перехватываем и отменяем движение мыши, если камера заблокирована бриджером
         if (ModConfig.isCameraLocked) {
-            event.setCanceled(true);
+            event.setCanceled(true); // Блокируем движение мыши, если камера заблокирована
         }
-
+        
         if (mc.currentScreen == null && mc.thePlayer != null) {
-            // Активация строительства по ПКМ
-            if (event.button == 1 && bridgeController.getCurrentState() == BridgeController.State.ARMED) {
-                if (event.buttonstate) { // Если кнопка зажата
-                    bridgeController.startBridging();
-                    event.setCanceled(true); // Отменяем стандартное действие, чтобы не ставить блок вручную
+            if (event.button == 1 && ModConfig.bridgerEnabled) { // ПКМ отвечает за строительство
+                if (bridgeController.getCurrentState() == BridgeController.State.ARMED && event.buttonstate) {
+                    bridgeController.startBridging(); // Начинаем строить при зажатии
+                    event.setCanceled(true);
+                } else if (bridgeController.getCurrentState() == BridgeController.State.BRIDGING && !event.buttonstate) {
+                    bridgeController.stopBridging(); // Останавливаем при отпускании
+                    event.setCanceled(true);
                 }
             }
         }
@@ -76,26 +75,24 @@ public class ClientEventHandler {
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START || mc.thePlayer == null) return;
 
-        // Надежная обработка нажатий клавиш
         handleKeyToggles();
         
-        // Логика бриджера (вызывается каждый тик)
         bridgeController.onTick();
 
         if (mc.currentScreen != null) {
-            // Если открыт любой интерфейс, отключаем все активные процессы
-            bridgeController.disarm();
+            if (bridgeController.getCurrentState() != BridgeController.State.IDLE) {
+                bridgeController.disarm();
+            }
             return;
         }
 
-        // Логика автокликера (работает только если бриджер неактивен)
+        // --- ИСПРАВЛЕНО: Логика автокликера работает только когда бриджер неактивен ---
         if (ModConfig.modEnabled && bridgeController.getCurrentState() == BridgeController.State.IDLE) {
             handleAutoClicker();
         }
     }
 
     private void handleKeyToggles() {
-        // Переключатель всего мода
         if (SimpleClickerMod.keyToggleMod.isKeyDown()) {
             if (!wasToggleModKeyPressed) {
                 ModConfig.modEnabled = !ModConfig.modEnabled;
@@ -105,7 +102,6 @@ public class ClientEventHandler {
             wasToggleModKeyPressed = false;
         }
 
-        // Переключатель бриджера
         if (SimpleClickerMod.keyToggleBridger.isKeyDown()) {
             if (!wasToggleBridgerKeyPressed) {
                 if (bridgeController.getCurrentState() == BridgeController.State.IDLE) {
@@ -120,7 +116,9 @@ public class ClientEventHandler {
         }
     }
 
+    // --- НОВОЕ: Правильная реализация автокликера ---
     private void handleAutoClicker() {
+        // Проверяем, что ЛКМ кликер включен и кнопка атаки зажата
         if (ModConfig.leftClickerEnabled && mc.gameSettings.keyBindAttack.isKeyDown()) {
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextLeftClickTime) {
@@ -128,6 +126,7 @@ public class ClientEventHandler {
                 nextLeftClickTime = currentTime + calculateDelay(ModConfig.leftCps, ModConfig.leftRandomization);
             }
         }
+        // Проверяем, что ПКМ кликер включен и кнопка использования зажата
         if (ModConfig.rightClickerEnabled && mc.gameSettings.keyBindUseItem.isKeyDown()) {
             long currentTime = System.currentTimeMillis();
             if (currentTime >= nextRightClickTime) {
@@ -158,8 +157,7 @@ public class ClientEventHandler {
         
         int yOffset = 5;
 
-        String clickerText = "Clicker: " + (ModConfig.modEnabled ? "§aON" : "§cOFF");
-        mc.fontRendererObj.drawStringWithShadow(clickerText, 5, yOffset, 0xFFFFFF);
+        mc.fontRendererObj.drawStringWithShadow("Clicker: " + (ModConfig.modEnabled ? "§aON" : "§cOFF"), 5, yOffset, 0xFFFFFF);
         yOffset += 10;
         
         if (ModConfig.bridgerEnabled && ModConfig.currentBridgeMode != BridgeMode.DISABLED) {
