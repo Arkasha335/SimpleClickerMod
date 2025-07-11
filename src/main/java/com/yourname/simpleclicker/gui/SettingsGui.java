@@ -10,6 +10,7 @@ import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 public class SettingsGui extends GuiScreen {
 
@@ -19,9 +20,14 @@ public class SettingsGui extends GuiScreen {
     private float hue = 0.0f;
     private int panelWidth, panelHeight, startX, startY;
 
+    // --- РАДИКАЛЬНОЕ ИЗМЕНЕНИЕ: Храним активный слайдер ---
+    private GuiSlider activeSlider;
+
+    // ... (initGui остается без изменений) ...
     @Override
     public void initGui() {
         this.buttonList.clear();
+        this.activeSlider = null; // Сбрасываем активный слайдер при открытии
 
         panelWidth = 340;
         panelHeight = 220;
@@ -37,26 +43,65 @@ public class SettingsGui extends GuiScreen {
         this.buttonList.add(new GuiColorButton(0, columnLeft, buttonY, elementWidth, 20, "Mod Enabled", ModConfig.modEnabled));
         this.buttonList.add(new GuiColorButton(7, columnRight, buttonY, elementWidth, 20, "HUD Enabled", ModConfig.hudEnabled));
         buttonY += 30;
-
         // Кнопки модуля Bridger
         this.buttonList.add(new GuiColorButton(10, columnLeft, buttonY, elementWidth, 20, "Bridger", ModConfig.bridgerEnabled));
         String modeName = "Mode: " + ModConfig.currentBridgeMode.getDisplayName();
         this.buttonList.add(new GuiColorButton(11, columnRight, buttonY, elementWidth, 20, modeName, ModConfig.currentBridgeMode != com.yourname.simpleclicker.bridge.BridgeMode.DISABLED));
         buttonY += 45;
-
         // Кнопки и слайдеры модуля Clicker
         this.buttonList.add(new GuiColorButton(1, columnLeft, buttonY, elementWidth, 20, "Left Clicker", ModConfig.leftClickerEnabled));
         this.buttonList.add(new GuiSlider(3, columnLeft, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.leftCps));
         this.buttonList.add(new GuiSlider(4, columnLeft, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.leftRandomization));
-
         this.buttonList.add(new GuiColorButton(2, columnRight, buttonY, elementWidth, 20, "Right Clicker", ModConfig.rightClickerEnabled));
         this.buttonList.add(new GuiSlider(5, columnRight, buttonY + 25, elementWidth, "CPS", 1.0f, 30.0f, (float) ModConfig.rightCps));
         this.buttonList.add(new GuiSlider(6, columnRight, buttonY + 50, elementWidth, "Randomize", 0.0f, 1.0f, (float) ModConfig.rightRandomization));
     }
 
+
+    // --- РАДИКАЛЬНОЕ ИЗМЕНЕНИЕ: Полностью новая логика обработки мыши ---
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        if (mouseButton == 0) { // Только левая кнопка мыши
+            for (GuiButton button : this.buttonList) {
+                if (button.mousePressed(this.mc, mouseX, mouseY)) {
+                    this.actionPerformed(button); // Вызываем действие для обычных кнопок
+
+                    if (button instanceof GuiSlider) {
+                        this.activeSlider = (GuiSlider) button; // ЗАПОМИНАЕМ АКТИВНЫЙ СЛАЙДЕР
+                        this.activeSlider.onDrag(mouseX); // Сразу обновляем значение
+                        updateConfigFromSliders();
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+        // Если у нас есть активный слайдер, двигаем только его
+        if (this.activeSlider != null) {
+            this.activeSlider.onDrag(mouseX);
+            updateConfigFromSliders(); // И обновляем конфиг
+        }
+    }
+
+    @Override
+    protected void mouseReleased(int mouseX, int mouseY, int state) {
+        // Когда отпускаем мышь, сбрасываем активный слайдер
+        if (this.activeSlider != null) {
+            this.activeSlider.mouseReleased(mouseX, mouseY);
+            this.activeSlider = null;
+        }
+        // Также сообщаем об этом всем остальным кнопкам (стандартное поведение)
+        super.mouseReleased(mouseX, mouseY, state);
+    }
+    
+    // ... (actionPerformed и updateConfigFromSliders остаются прежними) ...
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button.id < 20) {
+        if (button.id < 20 && !(button instanceof GuiSlider)) { // Игнорируем слайдеры
             switch (button.id) {
                 case 0: ModConfig.modEnabled = !ModConfig.modEnabled; break;
                 case 1: ModConfig.leftClickerEnabled = !ModConfig.leftClickerEnabled; break;
@@ -66,27 +111,6 @@ public class SettingsGui extends GuiScreen {
                 case 11: ModConfig.currentBridgeMode = ModConfig.currentBridgeMode.getNext(); break;
             }
             this.initGui();
-        }
-    }
-
-    @Override
-    protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
-        super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
-        for (GuiButton button : this.buttonList) {
-            if (button instanceof GuiSlider && ((GuiSlider) button).isDragging()) {
-                ((GuiSlider) button).updateValue(mouseX);
-                updateConfigFromSliders();
-            }
-        }
-    }
-
-    @Override
-    protected void mouseReleased(int mouseX, int mouseY, int state) {
-        super.mouseReleased(mouseX, mouseY, state);
-        for (GuiButton button : this.buttonList) {
-            if (button instanceof GuiSlider) {
-                ((GuiSlider) button).mouseReleased(mouseX, mouseY);
-            }
         }
     }
 
@@ -104,6 +128,7 @@ public class SettingsGui extends GuiScreen {
         }
     }
 
+    // ... (Вся логика отрисовки (drawScreen и т.д.) остается без изменений) ...
     private void generateBackgroundTexture() {
         int radius = 6;
         BufferedImage image = new BufferedImage(panelWidth, panelHeight, BufferedImage.TYPE_INT_ARGB);
@@ -126,19 +151,13 @@ public class SettingsGui extends GuiScreen {
         if (hue > 1.0F) hue -= 1.0F;
         Color animatedColor = Color.getHSBColor(hue, 0.8f, 1.0f);
         
-        // --- Рендер фона ---
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         GlStateManager.enableBlend();
-
-        // --- ИСПРАВЛЕНО ---
-        // Используем GlStateManager.bindTexture для работы с ID текстуры, а не ResourceLocation
         GlStateManager.bindTexture(backgroundTexture);
         drawModalRectWithCustomSizedTexture(startX, startY, 0, 0, panelWidth, panelHeight, panelWidth, panelHeight);
         
-        // --- Рендер рамки ---
         drawRoundedRectOutline(startX, startY, panelWidth, panelHeight, 6, 2.0f, animatedColor.getRGB());
         
-        // --- Заголовок ---
         this.drawCenteredString(this.fontRendererObj, Reference.MOD_NAME + " v" + Reference.VERSION, this.width / 2, startY + 10, Color.WHITE.getRGB());
         
         super.drawScreen(mouseX, mouseY, partialTicks);
